@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -18,9 +19,7 @@ async function getProject(slug: string) {
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+}: PageProps<"/projects/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);
   return { title: project ? `${project.title} — Satish Kumar` : "Project" };
@@ -28,52 +27,81 @@ export async function generateMetadata({
 
 export default async function ProjectPage({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+}: PageProps<"/projects/[slug]">) {
   const { slug } = await params;
   const project = await getProject(slug);
   if (!project) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">
+    <article className="mx-auto w-full max-w-6xl px-5 pt-16 sm:px-8 sm:pt-24">
+      <Link
+        href="/projects"
+        className="text-sm text-ink-soft hover:text-ink"
+      >
+        ← All work
+      </Link>
+      <h1
+        data-reveal
+        className="mt-8 font-display text-6xl leading-[0.95] sm:text-8xl"
+      >
         {project.title}
       </h1>
-      <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-        {project.description}
-      </p>
 
-      {(project.project_url || project.repo_url) && (
-        <div className="mt-6 flex gap-4 text-sm">
+      <div
+        data-reveal
+        className="mt-10 grid gap-8 border-y border-line py-8 sm:grid-cols-[2fr_1fr]"
+      >
+        <p className="text-xl leading-relaxed text-ink-soft">
+          {project.description}
+        </p>
+        <dl className="space-y-4 text-sm">
+          {project.tags.length > 0 && (
+            <div>
+              <dt className="text-ink-soft">Discipline</dt>
+              <dd className="mt-1">{project.tags.join(", ")}</dd>
+            </div>
+          )}
           {project.project_url && (
-            <a
-              href={project.project_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-4"
-            >
-              Live site
-            </a>
+            <div>
+              <dt className="text-ink-soft">Live</dt>
+              <dd className="mt-1">
+                <a
+                  href={project.project_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:text-accent"
+                >
+                  View project ↗
+                </a>
+              </dd>
+            </div>
           )}
           {project.repo_url && (
-            <a
-              href={project.repo_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-4"
-            >
-              Source
-            </a>
+            <div>
+              <dt className="text-ink-soft">Source</dt>
+              <dd className="mt-1">
+                <a
+                  href={project.repo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-4 hover:text-accent"
+                >
+                  Repository ↗
+                </a>
+              </dd>
+            </div>
           )}
-        </div>
-      )}
+        </dl>
+      </div>
 
       {project.content && (
-        <div className="prose prose-zinc mt-10 max-w-none whitespace-pre-wrap dark:prose-invert">
+        <div
+          data-reveal
+          className="mt-12 max-w-2xl text-lg leading-relaxed whitespace-pre-wrap"
+        >
           {project.content}
         </div>
       )}
-    </div>
+    </article>
   );
 }

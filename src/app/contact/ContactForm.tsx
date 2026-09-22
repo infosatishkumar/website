@@ -5,70 +5,56 @@ import { submitContactMessage, type ContactFormState } from "./actions";
 
 const initialState: ContactFormState = { status: "idle" };
 
+const fieldClass =
+  "w-full border-b border-line bg-transparent py-3 text-lg outline-none transition-colors placeholder:text-ink-soft/60 focus:border-ink";
+
 export default function ContactForm() {
   const [state, formAction, pending] = useActionState(
     submitContactMessage,
     initialState,
   );
 
+  if (state.status === "success") {
+    return (
+      <div role="status" className="py-10">
+        <p className="font-display text-4xl">
+          Thank you <em className="text-accent">✦</em>
+        </p>
+        <p className="mt-3 text-ink-soft">{state.message}</p>
+      </div>
+    );
+  }
+
   return (
-    <form action={formAction} className="mt-10 flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <label htmlFor="name" className="text-sm font-medium">
-          Name
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          className="rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          className="rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="message" className="text-sm font-medium">
-          Message
-        </label>
+    <form action={formAction} className="flex flex-col gap-8">
+      <label className="block">
+        <span className="text-sm text-ink-soft">Your name</span>
+        <input name="name" type="text" required className={fieldClass} />
+      </label>
+      <label className="block">
+        <span className="text-sm text-ink-soft">Email</span>
+        <input name="email" type="email" required className={fieldClass} />
+      </label>
+      <label className="block">
+        <span className="text-sm text-ink-soft">Tell me about your project</span>
         <textarea
-          id="message"
           name="message"
-          rows={5}
+          rows={4}
           required
-          className="rounded-md border border-black/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-black/30 dark:border-white/10 dark:focus:border-white/30"
+          className={`${fieldClass} resize-none`}
         />
-      </div>
+      </label>
 
       <button
         type="submit"
         disabled={pending}
-        className="w-fit rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="self-start rounded-full bg-ink px-8 py-4 text-paper transition-colors hover:bg-accent disabled:opacity-50"
       >
-        {pending ? "Sending…" : "Send message"}
+        {pending ? "Sending…" : "Send message →"}
       </button>
 
-      {state.status !== "idle" && (
-        <p
-          role="status"
-          className={
-            state.status === "success"
-              ? "text-sm text-green-600 dark:text-green-400"
-              : "text-sm text-red-600 dark:text-red-400"
-          }
-        >
+      {state.status === "error" && (
+        <p role="alert" className="text-sm text-accent">
           {state.message}
         </p>
       )}

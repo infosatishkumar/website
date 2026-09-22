@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -18,32 +19,43 @@ async function getPost(slug: string) {
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+}: PageProps<"/blog/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
-  return { title: post ? `${post.title} — Satish Kumar` : "Post" };
+  return { title: post ? `${post.title} — Satish Kumar` : "Journal" };
 }
 
 export default async function BlogPostPage({
   params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+}: PageProps<"/blog/[slug]">) {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) notFound();
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">{post.title}</h1>
+    <article className="mx-auto w-full max-w-3xl px-5 pt-16 sm:px-8 sm:pt-24">
+      <Link href="/blog" className="text-sm text-ink-soft hover:text-ink">
+        ← Journal
+      </Link>
+      <h1
+        data-reveal
+        className="mt-8 font-display text-5xl leading-[1.02] sm:text-7xl"
+      >
+        {post.title}
+      </h1>
       {post.published_at && (
-        <p className="mt-2 text-sm text-zinc-500">
-          {new Date(post.published_at).toLocaleDateString()}
+        <p data-reveal className="mt-6 text-sm text-ink-soft">
+          {new Date(post.published_at).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
         </p>
       )}
-      <div className="prose prose-zinc mt-10 max-w-none whitespace-pre-wrap dark:prose-invert">
+      <div
+        data-reveal
+        className="mt-12 border-t border-line pt-12 text-lg leading-relaxed whitespace-pre-wrap"
+      >
         {post.content}
       </div>
     </article>
