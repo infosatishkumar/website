@@ -19,7 +19,9 @@ Brain: **Claude API** (aapki API key). Animation: aapka diya hua Lottie orb.
 | "Bye" / "So jao" | Wapas wake word ka intezaar karta hai |
 | Kuch bhi poocho | Baat karta hai, jawab deta hai, beech me updates bhi deta hai |
 
-Kaam karte waqt orb ki animation state dikhati hai: 😴 sleeping (dhimi), 👂 sun raha hai (glow), ⚙️ kaam chal raha hai (tez ring), 🗣️ bol raha hai (pulse).
+Screen par sirf ek chhoti floating animation (aapka Lottie sparkle) desktop ke kone me rehti hai — koi window ya naam nahi.
+Animation hi state dikhati hai: 😴 sleeping (dhimi), 👂 sun rahi hai (glow), ⚙️ kaam chal raha hai (pink glow, uchhalti hai), 🗣️ bol rahi hai (pulse).
+Jab wo baat karti hai ya kaam karti hai tab neeche ek chhota caption aata hai, aur kaam khatam hone ke kuch second baad chala jaata hai.
 
 ## Setup (ek baar, ~5 minute)
 
@@ -49,9 +51,10 @@ Login par apne aap start karna ho to: `bash make_app.sh --login`
 - Bolein: **"Karishma"** → wo bolegi "Haan Satish, boliye?" → apna kaam bolein.
 - Ya ek saath: **"Karishma, Chrome me Google Docs kholo"**.
 - Jawab ke baad ~25 second tak bina naam liye follow-up bol sakte hain.
-- Orb par click = sunna shuru. Kaam chal raha ho to click/■ = rok do.
-- Neeche box me type karke bhi baat kar sakte hain.
-- ⚙︎ Settings: API key, naam, wake word, voice, speed, bhasha (Hinglish / Hindi / English), model.
+- Animation par **click** = sunna shuru. Kaam chal raha ho to click = rok do.
+- Animation ko **drag** karke screen par kahin bhi rakh sakte hain.
+- **Right-click** = menu: Type karein, Rok do, Mic band/chalu, Files, Settings, Chhupa do, Band karein.
+- Settings: API key, naam, wake word, voice, speed, bhasha (Hinglish / Hindi / English), model.
 
 Banaye gaye files: `~/Documents/AI-Agent/` (posters, videos, research).
 Logs: `~/Library/Logs/AI-Agent.log`. Terminal se chalana ho: `bash run.sh`.
@@ -88,6 +91,6 @@ mac-agent/
 │   ├── voice.py      # speech-to-text + macOS `say`
 │   ├── wake.py       # kisi bhi naam ka wake word (fuzzy match)
 │   └── config.py     # settings (naam, key, voice)
-├── ui/               # orb UI + aapki Lottie animation
+├── ui/               # floating animation widget + settings window
 └── assets/           # app icon
 ```

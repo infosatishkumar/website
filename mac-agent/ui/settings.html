@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <main>
+    <h1>Settings</h1>
+    <label>Claude API key <span id="key-hint" class="hint"></span>
+      <input id="s-api_key" type="password" placeholder="sk-ant-…" autocomplete="off" />
+    </label>
+    <div class="row">
+      <label>Agent ka naam<input id="s-agent_name" /></label>
+      <label>Wake word (isse jaagegi)<input id="s-wake_word" /></label>
+    </div>
+    <label>Aapka naam<input id="s-user_name" /></label>
+    <div class="row">
+      <label>Voice<select id="s-voice"></select></label>
+      <label>Speed<input id="s-speech_rate" type="number" min="120" max="260" step="5" /></label>
+    </div>
+    <div class="row">
+      <label>Sunne ki bhasha
+        <select id="s-stt_language">
+          <option value="en-IN">Hinglish / English (India)</option>
+          <option value="hi-IN">Hindi (हिंदी)</option>
+          <option value="en-US">English (US)</option>
+        </select>
+      </label>
+      <label>Follow-up time (sec)<input id="s-conversation_timeout" type="number" min="5" max="120" /></label>
+    </div>
+    <div class="row">
+      <label>Model
+        <select id="s-model">
+          <option value="claude-opus-5">Claude Opus 5 (sabse smart)</option>
+          <option value="claude-sonnet-5">Claude Sonnet 5 (tez, sasta)</option>
+        </select>
+      </label>
+      <label>Effort
+        <select id="s-effort">
+          <option value="low">Low (tez)</option>
+          <option value="medium">Medium</option>
+          <option value="high">High (zyada soch)</option>
+        </select>
+      </label>
+    </div>
+    <label class="check"><input id="s-speak_replies" type="checkbox" /> Jawab bol kar sunao</label>
+    <div class="actions">
+      <button id="btn-test-voice" class="ghost">🔊 Test voice</button>
+      <button id="btn-clear" class="ghost">🧹 Nayi baat-cheet</button>
+    </div>
+    <div class="actions">
+      <button id="btn-cancel" class="ghost">Cancel</button>
+      <button id="btn-save" class="primary">Save</button>
+    </div>
+    <p id="saved" class="saved"></p>
+  </main>
+  <script src="settings.js"></script>
+</body>
+</html>

@@ -21,6 +21,8 @@ from .wake import find_wake_word  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_FILE = ROOT / "ui" / "index.html"
+SETTINGS_FILE = ROOT / "ui" / "settings.html"
+WIDGET_SIZE = (280, 330)  # floating widget: animation + caption
 ICON_FILE = ROOT / "assets" / "icon.png"
 
 STOP_WORDS = re.compile(r"^\s*(stop|ruko|ruk jao|chup|bas karo|cancel|shut up)\s*[.!]?\s*$", re.I)
@@ -165,6 +167,7 @@ class Api:
 
     def __init__(self, agent):
         self._agent = agent
+        self._settings_window = None
 
     def send_text(self, text):
         threading.Thread(target=self._agent.handle, args=(text, "typed"), daemon=True).start()
@@ -220,6 +223,30 @@ class Api:
     def clear_chat(self):
         self._agent.brain.reset()
 
+    def open_settings(self):
+        if self._settings_window is not None:
+            try:
+                self._settings_window.restore()
+                self._settings_window.show()
+                return
+            except Exception:
+                self._settings_window = None
+        win = webview.create_window(
+            "Settings", url=str(SETTINGS_FILE), js_api=self, width=460, height=640,
+            resizable=False, on_top=True, background_color="#14122B",
+        )
+
+        def closed():
+            self._settings_window = None
+
+        win.events.closed += closed
+        self._settings_window = win
+
+    def close_settings(self):
+        if self._settings_window is not None:
+            self._settings_window.destroy()
+            self._settings_window = None
+
     def minimize(self):
         self._agent.window.minimize()
 
@@ -248,18 +275,29 @@ def _set_dock_icon():
 def main():
     agent = Agent()
     api = Api(agent)
+    width, height = WIDGET_SIZE
+    x = y = None
+    try:
+        # Park the widget in the bottom-right corner of the main screen.
+        screen = webview.screens[0]
+        x, y = screen.width - width - 24, screen.height - height - 40
+    except Exception:
+        pass
     agent.window = webview.create_window(
         agent.config["agent_name"],
         url=str(UI_FILE),
         js_api=api,
-        width=400,
-        height=640,
-        min_size=(340, 480),
+        width=width,
+        height=height,
+        x=x,
+        y=y,
+        resizable=False,
         frameless=True,
         easy_drag=False,
+        shadow=False,
         on_top=True,
         transparent=True,
-        background_color="#0B0B1A",
+        background_color="#000000",
     )
     agent.window.events.loaded += agent.on_loaded
 
