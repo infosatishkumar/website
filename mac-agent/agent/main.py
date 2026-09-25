@@ -291,8 +291,23 @@ def _set_dock_icon():
         pass
 
 
+def _set_app_name(name):
+    """Show the agent's name (not "Python") in the Dock and menu bar."""
+    if sys.platform != "darwin":
+        return
+    try:
+        from Foundation import NSBundle
+
+        info = NSBundle.mainBundle().infoDictionary()
+        info["CFBundleName"] = name
+        info["CFBundleDisplayName"] = name
+    except Exception:
+        pass
+
+
 def main():
     agent = Agent()
+    _set_app_name(agent.config["agent_name"])
     api = Api(agent)
     width, height = WIDGET_SIZE
     x = y = None

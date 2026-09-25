@@ -34,14 +34,13 @@ done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
 # --- launcher ---
-cat > "$APP/Contents/MacOS/launcher" <<LAUNCH
-#!/bin/bash
-export PATH="/opt/homebrew/bin:/usr/local/bin:\$PATH"
-cd "$ROOT"
-mkdir -p "\$HOME/Library/Logs"
-exec "$ROOT/.venv/bin/python" -m agent.main >> "\$HOME/Library/Logs/AI-Agent.log" 2>&1
-LAUNCH
+# A real (compiled) executable, so macOS shows the microphone permission prompt
+# for this app. It starts the Python agent from this folder.
+ARCH="$(uname -m)"
+[[ "$ARCH" == "arm64" ]] || ARCH="x86_64"
+cp "launcher/launcher-$ARCH" "$APP/Contents/MacOS/launcher"
 chmod +x "$APP/Contents/MacOS/launcher"
+echo "$ROOT" > "$APP/Contents/Resources/agent_root"
 
 BUNDLE_ID="com.aiagent.$(echo "$NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -59,6 +58,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>LSUIElement</key><true/>
   <key>NSMicrophoneUsageDescription</key><string>$NAME aapki awaaz sunkar kaam karti hai.</string>
   <key>NSSpeechRecognitionUsageDescription</key><string>$NAME aapki baat samajhne ke liye speech recognition use karti hai.</string>
   <key>NSAppleEventsUsageDescription</key><string>$NAME aapke kehne par apps (Chrome, Finder, Music…) control karti hai.</string>
@@ -73,6 +73,9 @@ if [[ $LOGIN == 1 ]]; then
   osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$APP\", hidden:false}" >/dev/null
   echo "==> Login par auto-start ON"
 fi
+
+# Reset old permission decisions so macOS asks again for the new build.
+tccutil reset Microphone "$BUNDLE_ID" >/dev/null 2>&1 || true
 
 echo "✅ Ban gaya: $APP"
 echo "   Launchpad / Spotlight (Cmd+Space) me \"$NAME\" likhkar kholiye."
