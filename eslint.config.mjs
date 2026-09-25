@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Standalone macOS voice agent (Python + vendored Lottie), not part of the site.
-    "mac-agent/**",
   ]),
 ]);
 

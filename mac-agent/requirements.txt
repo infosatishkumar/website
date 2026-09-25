@@ -1,8 +1,0 @@
-anthropic>=1.8.0
-pywebview>=6.0
-SpeechRecognition>=3.10
-# Microphone access (bundles PortAudio, so Homebrew is not needed)
-sounddevice>=0.5
-# Bundled ffmpeg binary for video editing (works on Intel and Apple Silicon)
-imageio-ffmpeg>=0.5
-Pillow>=10.0
