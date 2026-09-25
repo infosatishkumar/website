@@ -1,0 +1,8 @@
+anthropic>=1.8.0
+pywebview>=6.0
+SpeechRecognition>=3.10
+PyAudio>=0.2.14
+Pillow>=10.0
+# Python 3.13+ removed these stdlib modules that SpeechRecognition uses
+audioop-lts; python_version >= "3.13"
+standard-aifc; python_version >= "3.13"
