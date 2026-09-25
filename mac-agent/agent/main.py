@@ -8,7 +8,7 @@ import threading
 import time
 from pathlib import Path
 
-# Apps opened from Finder get a minimal PATH; make Homebrew tools (ffmpeg) visible.
+# Apps opened from Finder get a minimal PATH; make tools in the usual folders visible.
 os.environ["PATH"] = ":".join(["/opt/homebrew/bin", "/usr/local/bin", os.environ.get("PATH", "/usr/bin:/bin")])
 
 import webview  # noqa: E402

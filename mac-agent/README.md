@@ -23,26 +23,26 @@ Screen par sirf ek chhoti floating animation (aapka Lottie sparkle) desktop ke k
 Animation hi state dikhati hai: 😴 sleeping (dhimi), 👂 sun rahi hai (glow), ⚙️ kaam chal raha hai (pink glow, uchhalti hai), 🗣️ bol rahi hai (pulse).
 Jab wo baat karti hai ya kaam karti hai tab neeche ek chhota caption aata hai, aur kaam khatam hone ke kuch second baad chala jaata hai.
 
-## Setup (ek baar, ~5 minute)
+## Setup (ek baar, ~5-10 minute) — Intel aur Apple Silicon dono Mac par
 
-1. **Ye folder apne Mac par laayein**:
+Homebrew ki zaroorat **nahi** hai.
+
+1. **Claude API key banayein**: https://console.anthropic.com → Billing me credit daalein → API Keys → Create Key → copy (`sk-ant-...`).
+2. **Terminal kholein** (⌘ + Space → `Terminal`) aur ye ek command paste karein:
    ```bash
-   git clone https://github.com/infosatishkumar/website.git
-   cd website/mac-agent
+   cd ~ && curl -L -o karishma.zip https://github.com/infosatishkumar/website/archive/refs/heads/claude/eager-noether-rib191.zip && unzip -oq karishma.zip && cd website-claude-eager-noether-rib191/mac-agent && bash setup.sh
    ```
-2. **Setup chalayein** (Homebrew chahiye: https://brew.sh):
-   ```bash
-   bash setup.sh
-   ```
-   Ye Python, mic support (portaudio) aur ffmpeg install karega, aapki Claude API key poochega
-   (https://console.anthropic.com se milegi), aur `/Applications/Karishma.app` bana dega.
-3. **App kholiye**: Launchpad ya Spotlight (⌘ + Space) me "Karishma" likhiye. Dock me pin bhi kar sakte hain.
-4. **Permissions** — pehli baar macOS poochega, sab ko **Allow** karein:
+   Ye Python, mic support aur video tools (ffmpeg) apne aap install karega.
+3. Jab **"API key:"** likha aaye, apni key paste karein (⌘ + V) aur Enter dabayein. Key screen par dikhegi nahi — ye normal hai.
+4. **App kholiye**: ⌘ + Space → "Karishma" → Enter. Dock me pin bhi kar sakte hain.
+5. **Permissions** — macOS poochega, sab ko **Allow** karein:
    - Microphone (awaaz sunne ke liye)
    - Automation / Apple Events (Chrome, Finder etc. control ke liye)
    - Accessibility — System Settings › Privacy & Security › Accessibility me "Karishma" ON (typing/shortcuts ke liye)
    - Screen Recording (sirf "screen pe kya hai" ke liye)
    - Chrome me: View › Developer › **Allow JavaScript from Apple Events** (page padhne ke liye, optional)
+
+Key baad me daalni/badalni ho: animation par **right-click › Settings** › Claude API key › Save.
 
 Login par apne aap start karna ho to: `bash make_app.sh --login`
 
@@ -57,7 +57,7 @@ Login par apne aap start karna ho to: `bash make_app.sh --login`
 - Settings: API key, naam, wake word, voice, speed, bhasha (Hinglish / Hindi / English), model.
 
 Banaye gaye files: `~/Documents/AI-Agent/` (posters, videos, research).
-Logs: `~/Library/Logs/AI-Agent.log`. Terminal se chalana ho: `bash run.sh`.
+Logs: `~/Library/Logs/AI-Agent.log`. Terminal se chalana ho: `cd ~/website-claude-eager-noether-rib191/mac-agent && bash run.sh`.
 
 ## Behtar awaaz
 

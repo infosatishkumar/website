@@ -130,6 +130,14 @@ def _which(name):
         candidate = Path(prefix) / name
         if candidate.exists():
             return str(candidate)
+    if name == "ffmpeg":
+        # Bundled ffmpeg from the imageio-ffmpeg package (no Homebrew needed).
+        try:
+            import imageio_ffmpeg
+
+            return imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            return None
     return None
 
 
@@ -601,20 +609,26 @@ return out"""
         return f"Poster saved to {out_path} (HTML source {html_path}) and opened in Preview."
 
     def t_media_info(self, path):
+        target = str(_expand(path))
         ffprobe = _which("ffprobe")
-        if not ffprobe:
-            return "ffprobe not found. Install with: brew install ffmpeg"
-        code, out = _run([
-            ffprobe, "-v", "error", "-show_entries",
-            "format=duration,size,bit_rate:stream=index,codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels",
-            "-of", "json", str(_expand(path)),
-        ])
-        return out
+        if ffprobe:
+            code, out = _run([
+                ffprobe, "-v", "error", "-show_entries",
+                "format=duration,size,bit_rate:stream=index,codec_type,codec_name,width,height,r_frame_rate,sample_rate,channels",
+                "-of", "json", target,
+            ])
+            return out
+        ffmpeg = _which("ffmpeg")
+        if not ffmpeg:
+            return "ffmpeg not found."
+        # `ffmpeg -i` with no output prints the file's streams and duration.
+        _code, out = _run([ffmpeg, "-hide_banner", "-i", target])
+        return _truncate(out.replace("[stderr]", "").strip(), 3000)
 
     def t_run_ffmpeg(self, args, output_path, open_after=True):
         ffmpeg = _which("ffmpeg")
         if not ffmpeg:
-            return "ffmpeg not found. Install with: brew install ffmpeg"
+            return "ffmpeg not found. Run setup.sh again."
         args = [os.path.expanduser(a) if a.startswith("~") else a for a in args]
         out = Path(os.path.expanduser(output_path))
         if not out.is_absolute():

@@ -102,6 +102,48 @@ class Speaker:
             self._proc = None
 
 
+class SoundDeviceMicrophone(sr.AudioSource):
+    """Microphone for SpeechRecognition built on `sounddevice`.
+
+    sounddevice ships its own PortAudio library, so nothing extra (Homebrew,
+    portaudio, PyAudio) has to be installed. Works on Intel and Apple Silicon Macs.
+    """
+
+    def __init__(self, sample_rate=16000, chunk_size=1024):
+        self.SAMPLE_RATE = sample_rate
+        self.SAMPLE_WIDTH = 2  # 16-bit
+        self.CHUNK = chunk_size
+        self.stream = None
+        self._raw = None
+
+    def __enter__(self):
+        import sounddevice as sd
+
+        self._raw = sd.RawInputStream(
+            samplerate=self.SAMPLE_RATE, blocksize=self.CHUNK, channels=1, dtype="int16"
+        )
+        self._raw.start()
+        self.stream = _StreamReader(self._raw)
+        return self
+
+    def __exit__(self, *exc):
+        try:
+            self._raw.stop()
+            self._raw.close()
+        finally:
+            self._raw = None
+            self.stream = None
+
+
+class _StreamReader:
+    def __init__(self, raw):
+        self._raw = raw
+
+    def read(self, frames):
+        data, _overflowed = self._raw.read(frames)
+        return bytes(data)
+
+
 class Listener:
     """Captures one spoken phrase at a time and turns it into text."""
 
@@ -115,11 +157,11 @@ class Listener:
 
     def open(self):
         try:
-            self.mic = sr.Microphone()
+            self.mic = SoundDeviceMicrophone()
             with self.mic as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=1)
             self.error = None
-        except Exception as exc:  # no mic / permission denied / PyAudio missing
+        except Exception as exc:  # no mic / permission denied
             self.mic = None
             self.error = str(exc)
         return self.mic is not None
