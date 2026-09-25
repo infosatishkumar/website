@@ -59,10 +59,20 @@ Login par apne aap start karna ho to: `bash make_app.sh --login`
 Banaye gaye files: `~/Documents/AI-Agent/` (posters, videos, research).
 Logs: `~/Library/Logs/AI-Agent.log`. Terminal se chalana ho: `cd ~/website-claude-eager-noether-rib191/mac-agent && bash run.sh`.
 
-## Behtar awaaz
+## Female awaaz
 
-System Settings › Accessibility › Spoken Content › System Voice › Manage Voices me
-**English (India) → Isha / Veena (Premium ya Enhanced)** download karein. Agent apne aap sabse achhi Indian voice chun leta hai.
+Agent apne aap sirf female voice chunti hai (Isha → Veena → Lekha → Samantha…).
+Sabse achhi Hinglish awaaz ke liye: System Settings › Accessibility › Spoken Content › System Voice ›
+**Manage Voices** › English (India) › **Isha** ya **Veena** (Premium/Enhanced) download karein, phir app band karke dobara kholein.
+Right-click › Settings › Voice se koi bhi voice chun sakte hain.
+
+## Agar agent sun nahi raha
+
+Terminal me chalaiye (5 second bolna hoga), aur output ka screenshot bhejiye:
+```bash
+cd ~/website-claude-eager-noether-rib191/mac-agent && bash test_mic.sh
+```
+Agent khud bhi screen par batati hai: mic blocked hai, internet problem hai, ya usne kya suna (agar naam galat suna).
 
 ## Safety
 
@@ -84,6 +94,7 @@ mac-agent/
 ├── setup.sh          # one-time install
 ├── make_app.sh       # /Applications/<Naam>.app banata hai
 ├── run.sh            # Terminal se start
+├── test_mic.sh       # mic + voice check
 ├── agent/
 │   ├── main.py       # window + mic loop + wake word
 │   ├── brain.py      # Claude API tool-use loop

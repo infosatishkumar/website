@@ -18,12 +18,12 @@ DEFAULTS = {
     "agent_name": "Karishma",
     "wake_word": "Karishma",
     # Extra spellings the speech recogniser may produce for the wake word.
-    "wake_aliases": ["karishma", "करिश्मा", "charisma", "krishma", "karisma"],
+    "wake_aliases": ["karishma", "करिश्मा", "charisma", "krishma", "karisma", "karizma", "kirishma"],
     "user_name": "Satish",
     "api_key": "",
     "model": "claude-opus-5",
     "effort": "medium",
-    "voice": "",  # empty = auto-pick an Indian English voice
+    "voice": "",  # empty = auto-pick a female (preferably Indian English) voice
     "speech_rate": 185,
     "speak_replies": True,
     "stt_language": "en-IN",
@@ -46,6 +46,9 @@ class Config:
                 self._data.update(json.loads(CONFIG_PATH.read_text()))
             except (OSError, json.JSONDecodeError):
                 pass
+        if self._data["wake_word"].lower() == DEFAULTS["wake_word"].lower():
+            # Pick up new default spellings added in later versions.
+            self._data["wake_aliases"] = sorted(set(self._data["wake_aliases"]) | set(DEFAULTS["wake_aliases"]))
         self.save()
 
     def __getitem__(self, key):

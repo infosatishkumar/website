@@ -6,6 +6,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from pathlib import Path
 
 # Apps opened from Finder get a minimal PATH; make tools in the usual folders visible.
@@ -130,37 +131,55 @@ class Agent:
                       f"Mujhe kaam ke liye “{self.config['wake_word']}” boliye.")
         self.speaker.wait()
         self.go_to_sleep()
+        shown_problem = None
         while True:
-            if not self.config["mic_enabled"]:
-                time.sleep(0.5)
-                continue
-            if self.speaker.speaking or self.busy.locked():
-                time.sleep(0.2)  # don't listen to our own voice
-                continue
-            awake = time.time() < self.awake_until
-            if not awake and self.state in ("listening", "idle", "error"):
-                self.go_to_sleep()
-            text = self.listener.listen(timeout=6, phrase_limit=20)
-            if text is None:
-                self.set_state("error", "Mic nahi mil raha. System Settings › Privacy › Microphone me allow karein.")
-                time.sleep(3)
-                continue
-            if not text:
-                continue
-            command = find_wake_word(text, self.config["wake_word"], self.config["wake_aliases"])
-            if awake:
-                # Follow-up without the wake word; strip it if said anyway.
-                if command == "":
-                    self.wake(greet=True)
-                else:
-                    self.handle(text if command is None else command)
-            elif command is None:
-                continue  # not for us
-            elif command:
-                self.wake(greet=False)
-                self.handle(command)
-            else:
+            try:
+                self._listen_once()
+                problem = self.listener.problem
+                if problem != shown_problem:
+                    shown_problem = problem
+                    if problem:
+                        self.set_state("error", problem)
+                    elif self.state == "error":
+                        self.go_to_sleep()
+            except Exception:
+                # Never let one bad moment kill the microphone loop.
+                traceback.print_exc()
+                time.sleep(1)
+
+    def _listen_once(self):
+        if not self.config["mic_enabled"]:
+            time.sleep(0.5)
+            return
+        if self.speaker.speaking or self.busy.locked():
+            time.sleep(0.2)  # don't listen to our own voice
+            return
+        awake = time.time() < self.awake_until
+        if not awake and self.state in ("listening", "idle"):
+            self.go_to_sleep()
+        text = self.listener.listen(timeout=6, phrase_limit=20)
+        if text is None:
+            time.sleep(3)
+            return
+        if not text:
+            return
+        command = find_wake_word(text, self.config["wake_word"], self.config["wake_aliases"])
+        if awake:
+            # Follow-up without the wake word; strip it if said anyway.
+            if command == "":
                 self.wake(greet=True)
+            else:
+                self.handle(text if command is None else command)
+        elif command is None:
+            # Heard something, but not the wake word: show it briefly so it's
+            # clear the mic works and what name to say.
+            self.js("heard", text, self.config["wake_word"])
+        elif command:
+            self.wake(greet=False)
+            self.handle(command)
+        else:
+            self.wake(greet=True)
+
 
 class Api:
     """Functions the web UI can call as window.pywebview.api.<name>()."""

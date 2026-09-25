@@ -69,6 +69,10 @@
       else if (role === "system") showCaption(text, "tool", 6000);
       else showCaption(text, "agent", state === "sleeping" ? 8000 : 0);
     },
+    heard(text, wakeWord) {
+      if (state !== "sleeping") return;
+      showCaption(`Suna: “${text}”\n(“${wakeWord}” bolkar shuru karein)`, "user", 3500);
+    },
     setSettings(data) {
       settings = Object.assign(settings, data);
       document.title = settings.agent_name || "AI Agent";

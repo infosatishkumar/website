@@ -33,19 +33,23 @@ def find_wake_word(text, wake_word, aliases=()):
         return None
     for cand in _candidates(wake_word, aliases):
         n = len(cand)
-        target = " ".join(cand)
-        for i in range(len(words) - n + 1):
-            chunk = " ".join(words[i : i + n])
-            ratio = difflib.SequenceMatcher(None, chunk, target).ratio()
-            # Short names need a stricter match to avoid false wake-ups.
-            threshold = 0.9 if len(target) <= 4 else 0.78
-            if ratio >= threshold:
+        target = "".join(cand)
+        # Short names need a stricter match to avoid false wake-ups.
+        threshold = 0.9 if len(target) <= 4 else 0.78
+        for i in range(len(words)):
+            # Also try one extra word, for names split by the recogniser ("kari shma").
+            for size in (n, n + 1):
+                if i + size > len(words):
+                    continue
+                chunk = "".join(words[i : i + size])
+                if difflib.SequenceMatcher(None, chunk, target).ratio() < threshold:
+                    continue
                 # Only accept the wake word near the start of the sentence
                 # (allowing a greeting like "hey" / "ok" before it).
                 prefix = [w for w in words[:i] if w not in _GREETINGS]
                 if len(prefix) > 2:
                     continue
-                return _rest_of_text(text, i + n)
+                return _rest_of_text(text, i + size)
     return None
 
 
@@ -63,6 +67,8 @@ if __name__ == "__main__":
         ("charisma what is the time", "Karishma"),
         ("aaj mausam kaisa hai", "Karishma"),
         ("Satish youtube chalao", "Satish"),
+        ("kari shma chrome kholo", "Karishma"),
+        ("hey car isma time kya hai", "Karishma"),
     ]
     for text, wake in tests:
         print(repr(text), "->", repr(find_wake_word(text, wake, ["charisma"])))
