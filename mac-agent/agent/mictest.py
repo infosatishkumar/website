@@ -8,16 +8,15 @@ import time
 import speech_recognition as sr
 
 from .config import Config
-from .voice import Listener, Speaker, SoundDeviceMicrophone, list_voices
+from .voice import Listener, Speaker, SoundDeviceMicrophone, female_voices, list_voices
 
 
 def main():
     config = Config()
     print("\n=== 1. Voice ===")
     speaker = Speaker(config)
-    female = [n for n, loc in list_voices() if n.split(" (")[0] in
-              {"Isha", "Veena", "Lekha", "Samantha", "Karen", "Moira", "Tessa", "Serena", "Ava", "Zoe"}]
-    print("Female voices installed:", ", ".join(female) or "(none)")
+    print("All voices:", ", ".join(f"{n} [{loc} {g or '?'}]" for n, loc, g in list_voices()) or "(none)")
+    print("Female voices:", ", ".join(n for n, _, _ in female_voices()) or "(none)")
     print("Using voice:", speaker.voice or "(system default)")
     speaker.speak("Namaste! Ye meri awaaz ka test hai.", block=True)
 

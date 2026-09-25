@@ -210,7 +210,7 @@ class Api:
 
     def get_settings(self):
         data = self._agent.config.public()
-        data["voices"] = [f"{n}|{loc}" for n, loc in list_voices()]
+        data["voices"] = [f"{n}|{loc}" for n, loc, gender in list_voices() if gender != "male"]
         data["current_voice"] = self._agent.speaker.voice
         data["workspace"] = str(WORKSPACE)
         return data

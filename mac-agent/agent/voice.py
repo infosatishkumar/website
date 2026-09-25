@@ -24,33 +24,85 @@ PREFERRED_VOICES = [
     "Victoria", "Kathy", "Fiona",
 ]
 
-_VOICE_LINE = re.compile(r"^(.+?)\s{2,}([a-z]{2,3}[_-][A-Za-z0-9]+)\s+#")
-_EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿️‍]")
+# Known male voices, never auto-picked (and ignored if saved in Settings).
+MALE_VOICES = {
+    "Rishi", "Aman", "Alex", "Daniel", "Fred", "Aaron", "Arthur", "Gordon", "Oliver", "Tom",
+    "Evan", "Nathan", "Reed", "Rocko", "Eddy", "Grandpa", "Ralph", "Albert", "Bruce", "Junior",
+    "Jacques", "Thomas", "Lee", "Luca", "Jorge", "Juan", "Diego", "Xander", "Yuri", "Majed",
+    "Maged", "Tarik", "Otoya", "Hattori", "Ryo", "Aaron", "Noah", "Jamie",
+}
+KNOWN_FEMALE = {name.split(" (")[0] for name in PREFERRED_VOICES} | {"Flo", "Sandy", "Shelley", "Grandma"}
+
+_VOICE_LINE = re.compile(r"^(.+?)\s+([a-z]{2,3}_[A-Za-z0-9]{2,4})\s+#")
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200d]")
+_voice_cache = None
+
+
+def _base(name):
+    return name.split(" (")[0].strip()
 
 
 def list_voices():
-    """[(name, locale)] of voices installed for `say`."""
+    """[(name, locale, gender)] of installed voices; gender is 'female', 'male' or ''."""
+    global _voice_cache
+    if _voice_cache is not None:
+        return _voice_cache
+    voices = {}
+    # 1) Ask macOS directly: it knows each voice's gender.
+    try:
+        from AppKit import NSSpeechSynthesizer
+
+        for ident in NSSpeechSynthesizer.availableVoices():
+            attrs = NSSpeechSynthesizer.attributesForVoice_(ident) or {}
+            name = str(attrs.get("VoiceName") or "")
+            if not name:
+                continue
+            gender = str(attrs.get("VoiceGender") or "").lower()
+            gender = "female" if "female" in gender else "male" if "male" in gender else ""
+            locale = str(attrs.get("VoiceLocaleIdentifier") or "")
+            voices[name] = (name, locale, gender)
+    except Exception:
+        pass
+    # 2) Also read `say -v ?` (covers voices the old API doesn't list).
     try:
         out = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, timeout=10).stdout
+        for line in out.splitlines():
+            m = _VOICE_LINE.match(line)
+            if m and m.group(1).strip() not in voices:
+                name = m.group(1).strip()
+                voices[name] = (name, m.group(2), "")
     except (OSError, subprocess.SubprocessError):
-        return []
-    voices = []
-    for line in out.splitlines():
-        m = _VOICE_LINE.match(line)
-        if m:
-            voices.append((m.group(1).strip(), m.group(2)))
-    return voices
+        pass
+    result = []
+    for name, locale, gender in voices.values():
+        if not gender:
+            gender = "male" if _base(name) in MALE_VOICES else "female" if _base(name) in KNOWN_FEMALE else ""
+        result.append((name, locale, gender))
+    _voice_cache = sorted(result)
+    return _voice_cache
+
+
+def female_voices():
+    return [v for v in list_voices() if v[2] == "female"]
 
 
 def pick_voice(preferred=""):
-    """The voice set in Settings if installed, else the best female voice available."""
-    names = [v[0] for v in list_voices()]
-    if preferred and preferred in names:
-        return preferred
+    """The voice chosen in Settings (unless it's male), else the best female voice."""
+    voices = list_voices()
+    names = {v[0] for v in voices}
+    if preferred and preferred in names and _base(preferred) not in MALE_VOICES:
+        gender = next(v[2] for v in voices if v[0] == preferred)
+        if gender != "male":
+            return preferred
     for name in PREFERRED_VOICES:
         if name in names:
             return name
-    # Unknown voice list: `say` without -v uses the system voice.
+    female = female_voices()
+    if female:
+        # Prefer Indian voices, then English, then anything female.
+        female.sort(key=lambda v: (not v[1].endswith("IN"), not v[1].startswith("en"), v[0]))
+        return female[0][0]
+    print("[voice] No female voice found; using the system voice.", flush=True)
     return ""
 
 
@@ -72,9 +124,13 @@ class Speaker:
         self._proc = None
         self._lock = threading.Lock()
         self.voice = pick_voice(config["voice"])
+        print(f"[voice] using {self.voice or '(system default)'}", flush=True)
 
     def refresh_voice(self):
+        global _voice_cache
+        _voice_cache = None  # pick up newly downloaded voices
         self.voice = pick_voice(self.config["voice"])
+        print(f"[voice] using {self.voice or '(system default)'}", flush=True)
 
     @property
     def speaking(self):
