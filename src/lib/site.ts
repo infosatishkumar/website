@@ -2,20 +2,27 @@ export const siteUrl = "https://satishkumar.net";
 
 // Public profiles that describe the same person. Google uses these
 // `sameAs` links to tie every profile to one entity (Knowledge Panel).
-// Only list URLs that are live and clearly yours.
+// Only list profile pages here, not individual articles or answers.
 export const profiles = [
-  "https://www.instagram.com/infosatishkumar",
-  "https://www.behance.net/infosatishkumar",
+  "https://www.instagram.com/infosatishkumar/",
+  "https://www.facebook.com/infosatishkumar/",
+  "https://www.linkedin.com/in/infosatishkumar/",
+  "https://www.youtube.com/@infosatishkumar",
   "https://x.com/infosatishkumar",
+  "https://www.threads.com/@infosatishkumar",
+  "https://www.behance.net/infosatishkumar",
+  "https://in.pinterest.com/infosatishkumar/",
+  "https://medium.com/@infosatish.in",
+  "https://www.quora.com/profile/Satish-Kumar-35240",
+  "https://about.me/satishkumar.net",
   "https://github.com/infosatishkumar",
-  // TODO: add exact URLs for LinkedIn, Medium, YouTube, Facebook, Wikidata,
-  // Google Books / Amazon author page.
+  "https://www.wikidata.org/wiki/Q138779473",
 ];
 
 export const personJsonLd = {
   "@context": "https://schema.org",
   "@type": "Person",
-  "@id": `${siteUrl}/#person`,
+  "@id": `${siteUrl}/#satishkumar`,
   name: "Satish Kumar",
   url: siteUrl,
   // TODO: add a clear headshot at public/satish-kumar.jpg, then uncomment.
@@ -50,7 +57,7 @@ export const websiteJsonLd = {
   "@id": `${siteUrl}/#website`,
   url: siteUrl,
   name: "Satish Kumar",
-  publisher: { "@id": `${siteUrl}/#person` },
+  publisher: { "@id": `${siteUrl}/#satishkumar` },
 };
 
 export function jsonLdScript(data: object) {
