@@ -463,10 +463,27 @@
         if (!en.isIntersecting) return;
         links.forEach(function (l) { l.classList.remove("is-on"); });
         var a = map[en.target.id];
-        if (a) { a.classList.add("is-on"); a.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" }); }
+        if (!a) return;
+        a.classList.add("is-on");
+        // horizontal chip bar (tablet / mobile): keep the active chip in view without moving the page
+        var nav = a.parentElement;
+        if (nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2, behavior: "smooth" });
       });
     }, { rootMargin: "-45% 0px -50% 0px" });
     $$(".svc").forEach(function (s) { io.observe(s); });
+  }
+
+  /* ── Article table of contents highlight ────── */
+  function initToc() {
+    var links = $$(".article-toc a");
+    if (!links.length || !("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        links.forEach(function (l) { l.classList.toggle("is-on", l.getAttribute("href") === "#" + en.target.id); });
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    $$(".article h2[id]").forEach(function (h) { io.observe(h); });
   }
 
   /* ── Contact form ──────────────────────────────── */
@@ -522,6 +539,7 @@
     initFaq();
     initFilters();
     initSvcNav();
+    initToc();
     initForm();
     runIntro();
     if (hasGsap) {
