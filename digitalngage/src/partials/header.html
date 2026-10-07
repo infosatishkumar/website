@@ -1,0 +1,44 @@
+{{preloader}}
+<div class="curtain" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+<div class="progress" aria-hidden="true"></div>
+
+<header class="nav" role="banner">
+  <div class="wrap nav__inner">
+    <a class="nav__logo" href="index.html" aria-label="DigitalNgage home">
+      <img class="logo-white" src="images/brand/logo-white.png" alt="DigitalNgage" width="922" height="196">
+      <img class="logo-dark" src="images/brand/logo-dark.png" alt="" width="922" height="196">
+    </a>
+    <nav class="nav__links" aria-label="Main">
+      <a href="index.html" {{active:home}}>Home</a>
+      <a href="services.html" {{active:services}}>Services</a>
+      <a href="work.html" {{active:work}}>Work</a>
+      <a href="about.html" {{active:about}}>About</a>
+      <a href="packages.html" {{active:packages}}>Packages</a>
+      <a href="blog.html" {{active:blog}}>Insights</a>
+      <a href="contact.html" {{active:contact}}>Contact</a>
+    </nav>
+    <div class="nav__cta">
+      <a class="btn btn--light btn--sm" href="contact.html" data-magnetic>Free Audit {{icon:arrow}}</a>
+      <button class="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mmenu"><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<div class="mmenu" id="mmenu">
+  <nav class="mmenu__links" aria-label="Mobile">
+    <a href="index.html" {{active:home}}>Home <small>01</small></a>
+    <a href="services.html" {{active:services}}>Services <small>02</small></a>
+    <a href="work.html" {{active:work}}>Work <small>03</small></a>
+    <a href="about.html" {{active:about}}>About <small>04</small></a>
+    <a href="packages.html" {{active:packages}}>Packages <small>05</small></a>
+    <a href="blog.html" {{active:blog}}>Insights <small>06</small></a>
+    <a href="contact.html" {{active:contact}}>Contact <small>07</small></a>
+  </nav>
+  <div class="mmenu__foot">
+    <span>Let's talk growth</span>
+    <a href="tel:+919353241391">+91 93532 41391</a>
+    <a href="mailto:contact@digitalngage.com">contact@digitalngage.com</a>
+  </div>
+</div>
+
+<main id="main">

@@ -1,0 +1,46 @@
+<!--
+title: Building a Checkout Indian Shoppers Trust | DigitalNgage Insights
+description: Lessons from building the KIO Organics store — UPI-first payment options, cash on delivery, clear totals and payments verified on the server with Razorpay.
+nav: blog
+og_image: images/kio/checkout-payment.jpg
+-->
+<section class="phero">
+  <div class="blobs" aria-hidden="true"><span class="blob blob--1" style="background:#ffb020"></span><span class="blob blob--2"></span></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="crumbs" data-hero-fade><a href="index.html">Home</a><span>/</span><a href="blog.html">Insights</a><span>/</span>E-commerce</div>
+    <span class="pill" data-hero-fade>E-commerce · 6 min read</span>
+    <h1 class="h1 phero__title" data-hero-title style="margin-top:22px;max-width:20ch">Building a checkout Indian shoppers <span class="serif grad-text">trust.</span></h1>
+  </div>
+</section>
+
+<section class="section" data-nav-light>
+  <article class="wrap article">
+    <p class="lead" data-reveal>Most online stores don't lose sales on the product page — they lose them at checkout. When we built <a class="link-arrow" href="case-study-kio-organics.html">KIO Organics</a>, a store for raw honey, wood-pressed oils and ghee, we designed the checkout around how people in India actually pay.</p>
+
+    <h2 data-reveal>Show every UPI app by name</h2>
+    <p data-reveal>A generic "Pay online" button makes people hesitate. Listing PhonePe, Google Pay and Paytm with their own icons tells the shopper "your app works here" before they tap. At KIO, the Pay button moves right under whichever option is selected and shows the exact amount.</p>
+
+    <figure data-reveal style="margin:30px 0"><div class="browser"><img src="images/kio/checkout-payment.jpg" alt="KIO checkout with PhonePe selected" loading="lazy" width="700" height="1060" style="max-width:420px;margin:auto"></div><figcaption class="cap">Each payment option listed with its own icon.</figcaption></figure>
+
+    <h2 data-reveal>Keep cash on delivery</h2>
+    <p data-reveal>For first-time buyers of a new brand, COD is a trust bridge. Offer it — and use free-shipping thresholds and small prepaid incentives to nudge people towards paying online.</p>
+
+    <h2 data-reveal>Never trust the browser with money</h2>
+    <p data-reveal>The browser should only send which product and size the customer wants. The server works out the price from its own product list, creates the Razorpay order, and after payment verifies the signature <em>and</em> asks Razorpay to confirm the amount. Only then is the order marked paid.</p>
+
+    <h2 data-reveal>Confirm everything, instantly</h2>
+    <ul data-reveal>
+      <li>A clear confirmation page with the order ID and payment ID.</li>
+      <li>An itemised email to the customer.</li>
+      <li>An email to the owner with a one-tap WhatsApp confirmation button.</li>
+      <li>A webhook as backup, in case the customer closes the page early.</li>
+    </ul>
+
+    <h2 data-reveal>Design for the phone first</h2>
+    <p data-reveal>Most orders happen on mobile. Big tap targets, a sticky total, autofill-friendly address fields and a floating WhatsApp button make a measurable difference.</p>
+
+    <hr>
+    <p data-reveal><strong>Planning an online store?</strong> We design, build and market e-commerce stores end-to-end. <a class="link-arrow" href="contact.html?service=E-commerce%20Store">Talk to us about your store {{icon:arrow}}</a></p>
+  </article>
+</section>
