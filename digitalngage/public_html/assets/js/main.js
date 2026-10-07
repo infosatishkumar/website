@@ -146,7 +146,8 @@
       a.addEventListener("click", function (e) {
         var id = a.getAttribute("href");
         if (id.length < 2) return;
-        var t = $(id);
+        // getElementById: heading ids like "1-switch-…" are not valid CSS selectors
+        var t = document.getElementById(id.slice(1));
         if (!t) return;
         e.preventDefault();
         scrollToTarget(t);

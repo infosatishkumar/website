@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitalNgage — Agency Website Case Study</title>
+<meta name="description" content="How we redesigned digitalngage.com — from a single-page template into a 13-page animated agency website with service pages, client case studies, insights and a hardened lead form, running on shared hosting.">
+<meta property="og:title" content="DigitalNgage — Agency Website Case Study">
+<meta property="og:description" content="A 13-page animated agency website with GSAP motion, client case studies and a hardened lead form — built to run on simple shared hosting.">
+<meta property="og:image" content="images/hero.jpg">
+<link rel="icon" href="images/dn-mark.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0a14; --ink-2:#13131f; --orange:#ff5a1f; --orange-2:#e8480f; --amber:#ffb020; --violet:#7c4dff;
+  --paper:#fff8f3; --paper-2:#fff1e8; --white:#fff;
+  --text:#15151f; --text-2:#4b4b5c; --text-3:#8a8a9a; --on-dark:#f4f1ff; --on-dark-2:#a9a7c0;
+  --line:rgba(10,10,20,.09); --line-dark:rgba(255,255,255,.1);
+  --radius:22px; --radius-sm:14px;
+  --shadow:0 24px 60px -24px rgba(10,10,20,.35);
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{ font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--text); background:var(--paper); line-height:1.65; font-size:17px; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+img{ max-width:100%; height:auto; display:block; }
+a{ color:inherit; }
+h1,h2,h3{ font-family:Sora,system-ui,sans-serif; line-height:1.1; letter-spacing:-.03em; font-weight:700; }
+h2{ font-size:clamp(1.9rem,3.8vw,3rem); margin-bottom:16px; }
+h3{ font-size:1.2rem; letter-spacing:-.02em; margin-bottom:8px; }
+p{ color:var(--text-2); }
+.serif{ font-family:"Instrument Serif",Georgia,serif; font-style:italic; font-weight:400; letter-spacing:-.01em; color:var(--orange); }
+.wrap{ width:min(1200px, 100% - 32px); margin-inline:auto; }
+.eyebrow{ display:inline-flex; align-items:center; gap:10px; font-family:Sora,sans-serif; font-size:.76rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--orange); margin-bottom:16px; }
+.eyebrow::before{ content:""; width:24px; height:2px; background:var(--orange); border-radius:2px; }
+section{ padding:104px 0; }
+.lead{ font-size:1.14rem; max-width:720px; }
+.dark{ background:var(--ink); color:var(--on-dark); }
+.dark h2,.dark h3{ color:#fff; }
+.dark p{ color:var(--on-dark-2); }
+.white{ background:var(--white); }
+.sec-head{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:20px 48px; margin-bottom:48px; }
+.sec-head .lead{ max-width:520px; }
+
+/* reveal (only when JS + motion allowed) */
+.anim [data-reveal]{ opacity:0; transform:translateY(34px); transition:opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1); }
+.anim [data-reveal].in{ opacity:1; transform:none; }
+
+/* ---------- Hero ---------- */
+.hero{ background:var(--ink); color:#fff; padding:72px 0 0; overflow:hidden; position:relative; }
+.hero::before{ content:""; position:absolute; inset:0; background-image:linear-gradient(var(--line-dark) 1px, transparent 1px), linear-gradient(90deg, var(--line-dark) 1px, transparent 1px); background-size:72px 72px; opacity:.5; pointer-events:none; }
+.hero .wrap{ position:relative; }
+.brandrow{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:56px; }
+.brandrow img{ height:38px; width:auto; }
+.tag{ display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border-radius:999px; border:1px solid var(--line-dark); background:rgba(255,255,255,.05); font-size:.82rem; font-weight:600; color:var(--on-dark); }
+.tag i{ width:8px; height:8px; border-radius:50%; background:#b8f53a; }
+.hero h1{ font-size:clamp(2.5rem,6.4vw,5.2rem); letter-spacing:-.045em; max-width:15ch; margin-top:22px; }
+.hero .lead{ color:var(--on-dark-2); margin-top:20px; }
+.meta{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin-top:44px; padding:24px 0; border-top:1px solid var(--line-dark); border-bottom:1px solid var(--line-dark); }
+.meta dt{ font-size:.74rem; letter-spacing:.12em; text-transform:uppercase; color:var(--on-dark-2); margin-bottom:4px; }
+.meta dd{ color:#fff; font-weight:600; }
+.meta a{ color:#ff8a5c; text-decoration:none; }
+.meta a:hover{ text-decoration:underline; }
+.hero-shots{ position:relative; margin-top:60px; }
+.browser{ background:#fff; border-radius:14px; overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow); }
+.hero .browser{ border-radius:16px 16px 0 0; border-bottom:0; box-shadow:0 -10px 70px rgba(0,0,0,.5); border-color:var(--line-dark); }
+.browser-bar{ display:flex; align-items:center; gap:7px; padding:11px 14px; background:#f1ede9; border-bottom:1px solid var(--line); }
+.browser-bar i{ width:11px; height:11px; border-radius:50%; display:block; background:#ff5f57; }
+.browser-bar i:nth-child(2){ background:#febc2e; } .browser-bar i:nth-child(3){ background:#28c840; }
+.browser-bar span{ margin-left:12px; flex:1; max-width:340px; background:#fff; border-radius:999px; padding:4px 14px; font-size:.78rem; color:#6b6b6b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hero .phone{ position:absolute; right:3%; bottom:-30px; width:clamp(140px,19%,240px); }
+.phone{ border-radius:34px; border:9px solid #111; background:#111; box-shadow:0 30px 60px rgba(0,0,0,.45); overflow:hidden; }
+.phone img{ border-radius:25px; }
+
+/* ---------- Stats ---------- */
+.stats{ padding:0; background:var(--white); border-bottom:1px solid var(--line); }
+.stats .wrap{ display:grid; grid-template-columns:repeat(4,1fr); }
+.stat{ padding:34px 24px; border-right:1px solid var(--line); }
+.stat:last-child{ border-right:0; }
+.stat b{ display:block; font-family:Sora,sans-serif; font-size:2.6rem; font-weight:800; letter-spacing:-.05em; color:var(--orange); line-height:1.1; }
+.stat span{ font-size:.93rem; color:var(--text-2); }
+
+/* ---------- Layout helpers ---------- */
+.split{ display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+.split.top{ align-items:start; }
+.split.reverse .media{ order:-1; }
+figure{ margin:0; }
+figcaption{ font-size:.86rem; color:var(--text-3); padding:12px 4px 0; }
+.dark figcaption{ color:var(--on-dark-2); }
+.list{ list-style:none; display:grid; gap:12px; margin-top:24px; }
+.list li{ display:flex; gap:14px; align-items:flex-start; background:var(--white); border:1px solid var(--line); border-radius:var(--radius-sm); padding:16px 18px; }
+.list li::before{ content:""; flex:0 0 22px; height:22px; margin-top:2px; border-radius:50%; background:var(--orange) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L19 8'/%3E%3C/svg%3E") center/12px no-repeat; }
+.list strong{ display:block; font-family:Sora,sans-serif; font-weight:600; font-size:1rem; letter-spacing:-.01em; margin-bottom:2px; }
+.list p{ font-size:.95rem; }
+.dark .list li{ background:rgba(255,255,255,.04); border-color:var(--line-dark); }
+.dark .list strong{ color:#fff; }
+
+/* ---------- Challenge ---------- */
+.pain{ display:grid; gap:14px; }
+.pain div{ border-left:3px solid var(--orange); background:var(--paper-2); padding:16px 20px; border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+.pain strong{ font-family:Sora,sans-serif; font-weight:600; }
+.pain p{ font-size:.95rem; margin-top:2px; }
+.badge{ display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:5px 10px; border-radius:999px; background:var(--ink); color:#fff; margin-bottom:12px; }
+.badge.new{ background:var(--orange); }
+
+/* ---------- Brief ---------- */
+.brief{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.brief div{ background:rgba(255,255,255,.04); border:1px solid var(--line-dark); border-radius:var(--radius); padding:26px; }
+.brief b{ display:block; font-family:Sora,sans-serif; color:var(--orange); font-size:.85rem; margin-bottom:12px; }
+blockquote{ font-family:Sora,sans-serif; font-size:clamp(1.3rem,2.4vw,1.9rem); font-weight:600; letter-spacing:-.02em; line-height:1.35; color:#fff; max-width:30ch; margin:8px 0 40px; }
+blockquote small{ display:block; margin-top:14px; font-family:"DM Sans",sans-serif; font-size:.92rem; font-weight:500; color:var(--on-dark-2); letter-spacing:0; }
+
+/* ---------- Design system ---------- */
+.swatches{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-top:28px; }
+.sw{ border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--line); background:var(--white); }
+.sw i{ display:block; height:84px; }
+.sw span{ display:block; padding:10px 12px; font-size:.82rem; font-weight:600; }
+.sw small{ display:block; color:var(--text-3); font-weight:500; }
+.type{ display:grid; gap:14px; margin-top:28px; }
+.type div{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; padding:18px 22px; background:var(--white); border:1px solid var(--line); border-radius:var(--radius-sm); }
+.type b{ font-size:1.7rem; line-height:1.1; }
+.type span{ font-size:.85rem; color:var(--text-3); white-space:nowrap; }
+.mark{ display:flex; gap:18px; align-items:center; margin-top:28px; padding:20px; border-radius:var(--radius); background:var(--ink); }
+.mark img:first-child{ width:64px; height:64px; background:#fff; border-radius:16px; padding:6px; }
+.mark img:last-child{ height:34px; width:auto; }
+
+/* ---------- Walkthrough ---------- */
+.walk{ display:grid; gap:90px; }
+.walk .split{ gap:56px; }
+.num{ font-family:Sora,sans-serif; font-weight:800; font-size:.85rem; color:var(--orange); letter-spacing:.1em; display:block; margin-bottom:10px; }
+
+/* ---------- Motion ---------- */
+.motion{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:44px; }
+.motion div{ background:rgba(255,255,255,.04); border:1px solid var(--line-dark); border-radius:var(--radius); padding:24px; }
+.motion .ico{ width:44px; height:44px; border-radius:12px; background:var(--orange); display:grid; place-items:center; margin-bottom:16px; }
+.motion .ico svg{ width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.motion div:nth-child(3n+2) .ico{ background:var(--amber); }
+.motion div:nth-child(3n) .ico{ background:var(--violet); }
+.motion p{ font-size:.95rem; }
+.note{ margin-top:28px; padding:18px 22px; border-radius:var(--radius-sm); border:1px dashed rgba(255,255,255,.25); color:var(--on-dark-2); font-size:.95rem; }
+.note b{ color:#fff; }
+
+/* ---------- Gallery ---------- */
+.gallery{ display:grid; grid-template-columns:1fr 1fr; gap:36px 28px; }
+.gallery .wide{ grid-column:1 / -1; }
+.gallery > *, .split > *, .ba > *, .phones > *{ min-width:0; }
+
+/* ---------- Mobile ---------- */
+.phones{ display:grid; grid-template-columns:repeat(4,minmax(0,240px)); gap:28px; justify-content:center; margin-top:48px; }
+.phones figure{ text-align:center; }
+.phones figure:nth-child(even){ margin-top:56px; }
+
+/* ---------- Feedback timeline ---------- */
+.rounds{ display:grid; gap:14px; }
+.round{ display:grid; grid-template-columns:150px 1fr 1fr; gap:22px; align-items:start; padding:22px 24px; background:var(--white); border:1px solid var(--line); border-radius:var(--radius); }
+.round small{ display:block; font-family:Sora,sans-serif; font-weight:700; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--orange); }
+.round .ask{ font-weight:600; color:var(--text); }
+.round .ask::before{ content:"Client: "; color:var(--text-3); font-weight:500; }
+.round .did{ color:var(--text-2); font-size:.96rem; }
+.round .did::before{ content:"We: "; color:var(--orange); font-weight:700; }
+
+/* ---------- Under the hood ---------- */
+.hood{ display:grid; grid-template-columns:repeat(2,1fr); gap:18px; margin-top:44px; }
+.hood div{ background:var(--white); border:1px solid var(--line); border-radius:var(--radius); padding:26px; }
+.hood ul{ list-style:none; margin-top:12px; display:grid; gap:8px; }
+.hood li{ padding-left:20px; position:relative; color:var(--text-2); font-size:.95rem; }
+.hood li::before{ content:""; position:absolute; left:2px; top:10px; width:7px; height:7px; border-radius:50%; background:var(--orange); }
+code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; background:var(--paper-2); padding:2px 6px; border-radius:6px; color:var(--orange-2); }
+
+/* ---------- Stack ---------- */
+.stack{ display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+.stack span{ padding:10px 18px; border-radius:999px; background:var(--ink); color:#fff; font-weight:600; font-size:.9rem; }
+
+/* ---------- Before / after ---------- */
+.compare{ display:grid; gap:12px; margin-top:40px; }
+.compare > div{ display:grid; grid-template-columns:180px 1fr 1fr; gap:18px; align-items:center; padding:20px 24px; border-radius:var(--radius-sm); background:rgba(255,255,255,.04); border:1px solid var(--line-dark); }
+.compare b{ font-family:Sora,sans-serif; color:#fff; }
+.compare .before{ color:var(--on-dark-2); }
+.compare .after{ color:#ffb38f; font-weight:600; }
+.compare .head{ background:none; border:0; padding-block:0; font-size:.76rem; text-transform:uppercase; letter-spacing:.12em; color:var(--on-dark-2); }
+.ba{ display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:44px; }
+
+/* ---------- CTA ---------- */
+.cta{ text-align:center; }
+.cta-box{ background:var(--orange); color:#fff; border-radius:36px; padding:clamp(48px,7vw,90px) clamp(22px,5vw,70px); }
+.cta-box h2{ color:#fff; font-size:clamp(2rem,5vw,3.8rem); max-width:18ch; margin:0 auto 16px; }
+.cta-box p{ color:rgba(255,255,255,.9); max-width:56ch; margin:0 auto 32px; }
+.btn{ display:inline-flex; align-items:center; gap:10px; padding:16px 28px; border-radius:999px; background:var(--ink); color:#fff; font-family:Sora,sans-serif; font-weight:700; text-decoration:none; transition:transform .35s cubic-bezier(.22,1,.36,1); }
+.btn:hover{ transform:translateY(-3px); }
+.btn.light{ background:#fff; color:var(--ink); }
+.btn-row{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+footer{ padding:32px 0 48px; text-align:center; font-size:.88rem; color:var(--text-3); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px){
+  section{ padding:80px 0; }
+  .split, .split.top, .brief, .motion, .hood, .ba{ grid-template-columns:1fr; gap:36px; }
+  .split.reverse .media{ order:0; }
+  .meta, .stats .wrap{ grid-template-columns:1fr 1fr; }
+  .stat:nth-child(2){ border-right:0; }
+  .stat:nth-child(-n+2){ border-bottom:1px solid var(--line); }
+  .swatches{ grid-template-columns:repeat(3,1fr); }
+  .gallery{ grid-template-columns:1fr; }
+  .phones{ grid-template-columns:repeat(2,minmax(0,240px)); }
+  .round{ grid-template-columns:1fr; gap:8px; }
+  .compare > div{ grid-template-columns:1fr; gap:6px; }
+  .compare .head{ display:none; }
+  .walk{ gap:64px; }
+}
+@media (max-width: 560px){
+  .meta{ grid-template-columns:1fr; }
+  .swatches{ grid-template-columns:repeat(2,1fr); }
+  .hero .phone{ display:none; }
+  .phones figure:nth-child(even){ margin-top:28px; }
+  .type div{ flex-direction:column; gap:4px; }
+}
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  .anim [data-reveal]{ opacity:1; transform:none; transition:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="brandrow">
+      <img src="images/logo-white.png" alt="DigitalNgage" width="922" height="196">
+      <span class="tag"><i></i> Case study · Agency website</span>
+    </div>
+    <span class="eyebrow">Website redesign · Design &amp; development</span>
+    <h1>An agency website that <span class="serif">sells the agency.</span></h1>
+    <p class="lead">DigitalNgage is a digital marketing and technology agency. Its old site was a single page that hid and showed sections with JavaScript. We rebuilt it as a 13-page, fully animated website with a page for every service, real client case studies, articles and a lead form that works — and it still runs on simple shared hosting.</p>
+    <dl class="meta">
+      <div><dt>Client</dt><dd>DigitalNgage</dd></div>
+      <div><dt>Industry</dt><dd>Digital marketing agency</dd></div>
+      <div><dt>Our role</dt><dd>Design, development &amp; deployment</dd></div>
+      <div><dt>Live website</dt><dd><a href="https://digitalngage.com/" target="_blank" rel="noopener">digitalngage.com ↗</a></dd></div>
+    </dl>
+    <div class="hero-shots">
+      <div class="browser">
+        <div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com</span></div>
+        <img src="images/hero.jpg" alt="DigitalNgage home page hero: We make brands sell online, digitally" width="1440" height="900">
+      </div>
+      <div class="phone"><img src="images/m-home.jpg" alt="DigitalNgage home page on a phone" width="780" height="1688"></div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══ STATS ═══ -->
+<section class="stats" aria-label="Project at a glance">
+  <div class="wrap">
+    <div class="stat"><b>13</b><span>pages, each with its own URL</span></div>
+    <div class="stat"><b>12</b><span>services, each with its own section</span></div>
+    <div class="stat"><b>2</b><span>in-depth client case studies</span></div>
+    <div class="stat"><b>3</b><span>articles with a desktop reading layout</span></div>
+  </div>
+</section>
+
+<!-- ═══ CHALLENGE ═══ -->
+<section>
+  <div class="wrap">
+    <div class="split top">
+      <div>
+        <span class="eyebrow">The challenge</span>
+        <h2>A capable agency with a <span class="serif">template-looking site.</span></h2>
+        <p class="lead">DigitalNgage runs social media, ads, SEO and websites for its clients — and also builds e-commerce stores and custom CRM software. None of that showed on its own website.</p>
+        <div class="pain" style="margin-top:28px">
+          <div><strong>One page pretending to be five</strong><p>All "pages" lived in one <code>index.html</code> and were shown or hidden with JavaScript. Every section shared one URL, so nothing could be shared or found on Google on its own.</p></div>
+          <div><strong>No proof of work</strong><p>Only six services in short cards, and no case studies — even though the team had built the KIO Organics store and the Metro CRM.</p></div>
+          <div><strong>A contact form that misbehaved</strong><p>Stray characters after the closing PHP tag meant the form's reply was not valid JSON, and the email's Reply-To line took the visitor's input without checking it.</p></div>
+          <div><strong>Didn't feel like a top agency</strong><p>Static layout, emoji icons and no motion — the site didn't match the quality of the work.</p></div>
+        </div>
+      </div>
+      <figure class="media" data-reveal>
+        <span class="badge">Before</span>
+        <div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com (old)</span></div><img src="images/old-home.jpg" alt="The old DigitalNgage single-page website" loading="lazy" width="1440" height="900"></div>
+        <figcaption>The previous site: one page, six services, no case studies.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ BRIEF ═══ -->
+<section class="dark">
+  <div class="wrap">
+    <span class="eyebrow">The brief</span>
+    <blockquote>"Latest, dynamic, fully animated — animation in every section. It should feel like a top digital marketing agency, with every page a marketing website needs."<small>— DigitalNgage, in the project brief</small></blockquote>
+    <div class="brief">
+      <div data-reveal><b>01</b><h3>Look like a top agency</h3><p>Modern, confident design with motion in every section — on brand, with the DigitalNgage orange.</p></div>
+      <div data-reveal><b>02</b><h3>Show the real work</h3><p>Full case studies for the KIO Organics e-commerce store and the Metro CRM software, built from the original project write-ups.</p></div>
+      <div data-reveal><b>03</b><h3>Everything an agency site has</h3><p>Services, portfolio, about, packages, insights, contact and FAQs — as separate, shareable pages.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DESIGN SYSTEM ═══ -->
+<section>
+  <div class="wrap">
+    <div class="split top">
+      <div>
+        <span class="eyebrow">Design system</span>
+        <h2>Built from the <span class="serif">DN logo.</span></h2>
+        <p class="lead">The palette starts from the orange in the DigitalNgage mark, set against a deep ink and a warm paper white. Dark and light sections alternate down every page so long pages never feel flat.</p>
+        <div class="mark">
+          <img src="images/dn-mark.png" alt="DN logo mark" width="256" height="256">
+          <img src="images/logo-white.png" alt="DigitalNgage wordmark" width="922" height="196">
+        </div>
+        <p style="margin-top:18px;font-size:.95rem">The DN mark is also the site's favicon and home-screen icon.</p>
+      </div>
+      <div>
+        <div class="swatches" data-reveal>
+          <div class="sw"><i style="background:#ff5a1f"></i><span>Brand orange<small>#FF5A1F</small></span></div>
+          <div class="sw"><i style="background:#0a0a14"></i><span>Ink<small>#0A0A14</small></span></div>
+          <div class="sw"><i style="background:#fff8f3"></i><span>Paper<small>#FFF8F3</small></span></div>
+          <div class="sw"><i style="background:#ffb020"></i><span>Amber<small>#FFB020</small></span></div>
+          <div class="sw"><i style="background:#7c4dff"></i><span>Violet<small>#7C4DFF</small></span></div>
+        </div>
+        <div class="type" data-reveal>
+          <div><b style="font-family:Sora;font-weight:800;letter-spacing:-.04em">Sora ExtraBold</b><span>Headlines</span></div>
+          <div><b style="font-family:'Instrument Serif';font-style:italic;font-weight:400;color:#ff5a1f">Instrument Serif</b><span>Accent words</span></div>
+          <div><b style="font-family:'DM Sans';font-weight:500;font-size:1.4rem">DM Sans — easy to read</b><span>Body text</span></div>
+        </div>
+        <p style="margin-top:16px;font-size:.92rem">Solid colours only — the client preferred flat brand colours to gradients.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HOME WALKTHROUGH ═══ -->
+<section class="white">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="eyebrow">Home page</span><h2>A home page that <span class="serif">tells the whole story.</span></h2></div>
+      <p class="lead">From the first headline to the footer, every section answers one question a prospect has: what do you do, who for, how, and why you.</p>
+    </div>
+    <div class="walk">
+      <div class="split">
+        <div data-reveal>
+          <span class="num">01 — HERO</span>
+          <h3 style="font-size:1.6rem">A headline that keeps moving</h3>
+          <p>"We make brands <em>go viral / sell online / rank #1 / get leads / scale fast</em> digitally." The rotating phrase sits over an interactive network of connected dots — a nod to the graph line in the DN logo — that moves away from the cursor. Floating cards show real numbers, and a ticker lists every service.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com</span></div><img src="images/hero.jpg" alt="Animated home hero" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+      <div class="split reverse">
+        <div data-reveal>
+          <span class="num">02 — SERVICES</span>
+          <h3 style="font-size:1.6rem">Eleven services at a glance</h3>
+          <p>Each card has its own icon, a short promise and tags. A soft highlight follows the cursor, the icon tilts on hover, and the whole card links to that service's section on the Services page.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/#services</span></div><img src="images/home-services.jpg" alt="Services grid on the home page" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+      <div class="split">
+        <div data-reveal>
+          <span class="num">03 — CASE STUDIES</span>
+          <h3 style="font-size:1.6rem">Proof, stacked like cards</h3>
+          <p>KIO Organics and Metro CRM appear as large cards that stick and stack as you scroll; the one underneath gently shrinks back. Each shows three hard numbers — 8 payment options, 6,000+ leads, 27,000+ follow-up notes.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/#work</span></div><img src="images/home-cases.jpg" alt="Stacking case study cards" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+      <div class="split reverse">
+        <div data-reveal>
+          <span class="num">04 — PROCESS</span>
+          <h3 style="font-size:1.6rem">Five steps, scrolled sideways</h3>
+          <p>The section pins in place and the five steps — audit, strategy, create, launch, scale — slide past horizontally while you scroll down, with a progress line underneath. On phones it becomes a simple vertical list.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com</span></div><img src="images/home-process.jpg" alt="Horizontal process section" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+      <div class="split">
+        <div data-reveal>
+          <span class="num">05 — WHY US</span>
+          <h3 style="font-size:1.6rem">A bento grid of reasons</h3>
+          <p>Marketing plus technology in one team, 360° coverage, data-first reporting, 24/7 monitoring, no lock-ins and a dedicated account manager — with bars that grow as the section comes into view.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com</span></div><img src="images/home-bento.jpg" alt="Why DigitalNgage bento grid" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+      <div class="split reverse">
+        <div data-reveal>
+          <span class="num">06 — TRUST &amp; FOOTER</span>
+          <h3 style="font-size:1.6rem">Testimonials, FAQs and a big sign-off</h3>
+          <p>An auto-playing testimonial slider, six FAQs that open one at a time, a call-to-action block and a footer with every service and case study, ending in a giant DigitalNgage wordmark.</p>
+        </div>
+        <figure class="media" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com</span></div><img src="images/home-footer.jpg" alt="Footer with giant wordmark" loading="lazy" width="1440" height="900"></div></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MOTION ═══ -->
+<section class="dark">
+  <div class="wrap">
+    <span class="eyebrow">Motion design</span>
+    <h2>Animation in every section — <span class="serif">without getting in the way.</span></h2>
+    <p class="lead">Motion is built with GSAP and ScrollTrigger, with Lenis for smooth scrolling. All three libraries are bundled with the site, so nothing depends on an outside CDN.</p>
+    <div class="motion">
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></span><h3>Word-by-word headlines</h3><p>Every heading rises into place word by word as it enters the screen.</p></div>
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="19" cy="5" r="2"/><path d="M7.5 16.5 10.5 11.5M13.7 9 17.3 6"/></svg></span><h3>Interactive network</h3><p>A canvas of connected dots in the hero that drifts and moves away from the cursor. It pauses when off screen.</p></div>
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg></span><h3>Magnetic buttons &amp; cursor</h3><p>Buttons lean towards the pointer; a custom cursor grows over links and shows "View" or "Read" on cards.</p></div>
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><h3>Counting numbers</h3><p>Stats count up from zero when they scroll into view, formatted the Indian way (6,000+).</p></div>
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="5" y="12" width="14" height="8" rx="2"/></svg></span><h3>Sticky stacking cards</h3><p>Case study cards pin and stack; images move slightly slower than the page for depth.</p></div>
+      <div data-reveal><span class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h18M15 6l6 6-6 6"/></svg></span><h3>Pinned sideways scroll</h3><p>The process section scrolls horizontally; marquees lean with the speed of your scroll.</p></div>
+    </div>
+    <p class="note"><b>Respectful by default:</b> a short loading screen shows only on the first visit, pages open with a single animation, and visitors who turn on "reduce motion" on their device get a calm, fully static version of every page. If JavaScript is off, all content is still visible.</p>
+  </div>
+</section>
+
+<!-- ═══ INNER PAGES ═══ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="eyebrow">Inner pages</span><h2>Every page a prospect <span class="serif">looks for.</span></h2></div>
+      <p class="lead">Services, Work, About, Packages, Insights and Contact — plus two full case studies and a custom 404 page.</p>
+    </div>
+    <div class="gallery">
+      <figure class="wide" data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/services.html</span></div><img src="images/services-sidebar.jpg" alt="Services page with a sticky left sidebar" loading="lazy" width="1440" height="900"></div><figcaption><b>Services</b> — all 12 services on one page, with a sticky sidebar that highlights the service you're reading. On phones it turns into a scrollable chip bar.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/work.html</span></div><img src="images/work.jpg" alt="Work page with client portfolio" loading="lazy" width="1440" height="900"></div><figcaption><b>Work</b> — client portfolio with filters for marketing, websites, e-commerce, software and ads.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/packages.html</span></div><img src="images/packages.jpg" alt="Packages page" loading="lazy" width="1440" height="900"></div><figcaption><b>Packages</b> — Starter, Growth and Enterprise plans plus fixed-scope projects; each button pre-fills the contact form.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/case-study-kio-organics.html</span></div><img src="images/cs-kio.jpg" alt="KIO Organics case study page" loading="lazy" width="1440" height="900"></div><figcaption><b>KIO Organics case study</b> — the e-commerce store, payments flow and mobile screens, in DigitalNgage branding.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/case-study-metro-crm.html</span></div><img src="images/cs-crm.jpg" alt="Metro CRM case study page" loading="lazy" width="1440" height="900"></div><figcaption><b>Metro CRM case study</b> — the sales CRM with five app screenshots and the problems it solved.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/blog-meta-ads-quality-leads.html</span></div><img src="images/article.jpg" alt="Article page with table of contents and sidebar" loading="lazy" width="1440" height="900"></div><figcaption><b>Insights</b> — articles with an "On this page" list that tracks your position, share buttons, an audit card and related reads.</figcaption></figure>
+      <figure data-reveal><div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>digitalngage.com/contact.html</span></div><img src="images/contact.jpg" alt="Contact page with lead form" loading="lazy" width="1440" height="900"></div><figcaption><b>Contact</b> — call, WhatsApp and email cards beside a lead form with service and budget choices.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MOBILE ═══ -->
+<section class="white">
+  <div class="wrap" style="text-align:center">
+    <span class="eyebrow">On mobile</span>
+    <h2>Designed for the phone <span class="serif">first.</span></h2>
+    <p class="lead" style="margin-inline:auto">Every page was checked at phone width with no sideways scrolling. A full-screen menu opens from the corner, and a WhatsApp button is always one tap away.</p>
+    <div class="phones">
+      <figure data-reveal><div class="phone"><img src="images/m-home.jpg" alt="Home page on mobile" loading="lazy" width="780" height="1688"></div><figcaption>Home</figcaption></figure>
+      <figure data-reveal><div class="phone"><img src="images/m-menu.jpg" alt="Full-screen mobile menu" loading="lazy" width="780" height="1688"></div><figcaption>Menu</figcaption></figure>
+      <figure data-reveal><div class="phone"><img src="images/m-services.jpg" alt="Services page on mobile" loading="lazy" width="780" height="1688"></div><figcaption>Services</figcaption></figure>
+      <figure data-reveal><div class="phone"><img src="images/m-contact.jpg" alt="Contact page on mobile" loading="lazy" width="780" height="1688"></div><figcaption>Contact</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEEDBACK ROUNDS ═══ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="eyebrow">Working with the client</span><h2>Shaped by <span class="serif">real feedback.</span></h2></div>
+      <p class="lead">After the first version went live, the client reviewed it on their own screen. Each round of feedback was turned around and re-checked on desktop and mobile.</p>
+    </div>
+    <div class="rounds">
+      <div class="round" data-reveal><small>Colour</small><p class="ask">"The gradient background doesn't look good — don't use gradients."</p><p class="did">Replaced every gradient and background glow with solid brand orange, amber and violet on solid ink and paper.</p></div>
+      <div class="round" data-reveal><small>Layout</small><p class="ask">"The website should be full screen — there's a gap on the left and right."</p><p class="did">Removed the fixed-width column so content spans the full screen, with a small comfortable margin.</p></div>
+      <div class="round" data-reveal><small>Transitions</small><p class="ask">"Opening a page plays the animation twice — it should happen once."</p><p class="did">Removed the page-change curtain; each page now opens with one entrance animation.</p></div>
+      <div class="round" data-reveal><small>Services</small><p class="ask">"The service buttons should be on the left, not the top."</p><p class="did">Moved the 12 services into a sticky left sidebar with numbers and a consultation button.</p></div>
+      <div class="round" data-reveal><small>Articles</small><p class="ask">"Articles look like mobile view on desktop."</p><p class="did">Built a three-column reading layout: contents list, wider article and a sidebar with a CTA and related posts.</p></div>
+      <div class="round" data-reveal><small>Favicon</small><p class="ask">"Use the DN logo as the favicon."</p><p class="did">Turned the DN mark into a transparent favicon in every size, plus a home-screen icon.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ UNDER THE HOOD ═══ -->
+<section class="white">
+  <div class="wrap">
+    <span class="eyebrow">Under the hood</span>
+    <h2>Simple to host, <span class="serif">simple to update.</span></h2>
+    <p class="lead">The client hosts on standard shared hosting, so the site is plain HTML, CSS and JavaScript with one small PHP file — no Node server, no monthly platform fee.</p>
+    <div class="hood">
+      <div data-reveal>
+        <h3>One header, thirteen pages</h3>
+        <p>A tiny Python build script stitches shared parts into every page, so the menu and footer are always identical.</p>
+        <ul>
+          <li>Pages live in <code>src/pages</code>; shared head, header and footer in <code>src/partials</code></li>
+          <li>Each page sets its own title, description and active menu item</li>
+          <li>The build also writes the sitemap</li>
+          <li>Upload the <code>public_html</code> folder and the site is live</li>
+        </ul>
+      </div>
+      <div data-reveal>
+        <h3>A lead form that holds up</h3>
+        <p>The PHP form handler was rewritten to be strict about what it accepts.</p>
+        <ul>
+          <li>Always returns clean JSON, so the page can show success or a fallback</li>
+          <li>Line breaks stripped from single-line fields to block email header injection</li>
+          <li>Phone and email checked on the server; a hidden field quietly drops spam bots</li>
+          <li>If sending fails, visitors are offered call and WhatsApp instead</li>
+        </ul>
+      </div>
+      <div data-reveal>
+        <h3>Found on Google</h3>
+        <ul>
+          <li>A real URL, title and description for every page</li>
+          <li>Open Graph images for WhatsApp, LinkedIn and Facebook previews</li>
+          <li>Business details as structured data, plus sitemap and robots files</li>
+          <li>Article headings have links, so sections can be shared directly</li>
+        </ul>
+      </div>
+      <div data-reveal>
+        <h3>Fast and accessible</h3>
+        <ul>
+          <li>Images load only when they come near the screen</li>
+          <li>Compression and browser caching set in <code>.htaccess</code></li>
+          <li>Skip link, visible keyboard focus and labelled buttons</li>
+          <li>Full support for the "reduce motion" setting</li>
+        </ul>
+      </div>
+    </div>
+    <div class="stack" data-reveal>
+      <span>HTML5</span><span>CSS3</span><span>JavaScript</span><span>GSAP + ScrollTrigger</span><span>Lenis</span><span>PHP 8</span><span>Python build script</span><span>Hostinger</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RESULTS ═══ -->
+<section class="dark">
+  <div class="wrap">
+    <span class="eyebrow">Results</span>
+    <h2>What changed for <span class="serif">DigitalNgage.</span></h2>
+    <div class="ba">
+      <figure data-reveal><span class="badge">Before</span><div class="browser"><img src="images/old-home.jpg" alt="Old DigitalNgage home page" loading="lazy" width="1440" height="900"></div></figure>
+      <figure data-reveal><span class="badge new">After</span><div class="browser"><img src="images/hero.jpg" alt="New DigitalNgage home page" loading="lazy" width="1440" height="900"></div></figure>
+    </div>
+    <div class="compare">
+      <div class="head"><span></span><span>Before</span><span>After</span></div>
+      <div data-reveal><b>Pages</b><span class="before">One page, sections hidden and shown with JavaScript</span><span class="after">13 real pages, each with its own URL and title</span></div>
+      <div data-reveal><b>Services</b><span class="before">6 short cards</span><span class="after">12 services, each with deliverables and its own enquiry button</span></div>
+      <div data-reveal><b>Proof</b><span class="before">Client names only</span><span class="after">Full KIO Organics and Metro CRM case studies with screenshots</span></div>
+      <div data-reveal><b>Content</b><span class="before">No articles</span><span class="after">Insights section with three practical guides</span></div>
+      <div data-reveal><b>Lead form</b><span class="before">Broken JSON reply, unchecked input</span><span class="after">Validated, spam-filtered, with a call / WhatsApp fallback</span></div>
+      <div data-reveal><b>Feel</b><span class="before">Static template</span><span class="after">Animated in every section, calm when motion is reduced</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-box" data-reveal>
+      <h2>See it live at digitalngage.com</h2>
+      <p>Scroll the home page, open a case study, try the menu on your phone. Want a website like this for your business? Let's talk.</p>
+      <div class="btn-row">
+        <a class="btn" href="https://digitalngage.com/" target="_blank" rel="noopener">Open digitalngage.com ↗</a>
+        <a class="btn light" href="https://digitalngage.com/contact.html" target="_blank" rel="noopener">Start a project</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>DigitalNgage website case study · Screenshots taken from the finished site.</footer>
+
+<script>
+(function () {
+  if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.documentElement.classList.add("anim");
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      en.target.classList.add("in");
+      io.unobserve(en.target);
+    });
+  }, { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll("[data-reveal]").forEach(function (el, i) {
+    el.style.transitionDelay = (i % 3) * 0.08 + "s";
+    io.observe(el);
+  });
+})();
+</script>
+</body>
+</html>
