@@ -113,34 +113,6 @@
     tl.add(function () { preloader.remove(); });
   }
 
-  /* ── Page transitions ──────────────────────────── */
-  var curtain = $(".curtain");
-  function curtainOut() {
-    if (!animate || !curtain) return;
-    var fromNav = false;
-    try { fromNav = sessionStorage.getItem("dn-nav") === "1"; sessionStorage.removeItem("dn-nav"); } catch (e) {}
-    if (!fromNav) return;
-    var bars = $$("span", curtain);
-    gsap.set(bars, { scaleY: 1, transformOrigin: "top" });
-    gsap.to(bars, { scaleY: 0, duration: 0.8, ease: "expo.inOut", stagger: 0.06, delay: 0.05 });
-  }
-  function bindTransitions() {
-    if (!animate || !curtain) return;
-    document.addEventListener("click", function (e) {
-      var a = e.target.closest("a");
-      if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-      var href = a.getAttribute("href");
-      if (!href || a.target === "_blank" || a.hasAttribute("download") || href.indexOf("#") === 0 || /^(mailto|tel|https?|wa|javascript):/i.test(href)) return;
-      if (href.split("#")[0] === location.pathname.split("/").pop()) return;
-      e.preventDefault();
-      try { sessionStorage.setItem("dn-nav", "1"); } catch (err) {}
-      var bars = $$("span", curtain);
-      gsap.set(bars, { scaleY: 0, transformOrigin: "bottom" });
-      gsap.to(bars, { scaleY: 1, duration: 0.6, ease: "expo.inOut", stagger: 0.05, onComplete: function () { location.href = href; } });
-    });
-    window.addEventListener("pageshow", function (e) { if (e.persisted) gsap.set($$("span", curtain), { scaleY: 0 }); });
-  }
-
   /* ── Nav ───────────────────────────────────────── */
   function initNav() {
     var nav = $(".nav");
@@ -551,8 +523,6 @@
     initFilters();
     initSvcNav();
     initForm();
-    bindTransitions();
-    curtainOut();
     runIntro();
     if (hasGsap) {
       window.addEventListener("load", function () { ScrollTrigger.refresh(); });

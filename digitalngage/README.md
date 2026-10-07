@@ -44,7 +44,7 @@ Social profile links in the footer are set in the `SOCIAL` dict at the top of `b
 
 ## Animation notes
 
-Preloader, page-transition curtain, custom cursor, magnetic buttons, split-text
+First-visit preloader, custom cursor, magnetic buttons, split-text
 headline reveals, rotating hero word, interactive particle network, floating
 glass cards, marquees, counters, stacking case-study cards, pinned horizontal
 process section, parallax, spotlight/tilt cards and testimonial slider.
