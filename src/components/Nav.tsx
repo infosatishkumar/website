@@ -8,6 +8,7 @@ const links = [
   { href: "/about", label: "About" },
   { href: "/blog", label: "Journal" },
   { href: "/contact", label: "Contact" },
+  { href: "/racing", label: "Race" },
 ];
 
 export default function Nav() {
