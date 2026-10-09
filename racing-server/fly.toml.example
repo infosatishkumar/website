@@ -1,0 +1,26 @@
+# Example Fly.io config. Copy to fly.toml at the repo root (or pass -c),
+# set `app`, then: fly launch --no-deploy && fly volumes create vr_data && fly deploy
+app = "velocity-rush-race"
+primary_region = "sin"
+
+[build]
+  dockerfile = "racing-server/Dockerfile"
+
+[env]
+  REGION = "Asia (Singapore)"
+
+[[mounts]]
+  source = "vr_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/health"

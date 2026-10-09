@@ -50,3 +50,9 @@ for production/preview deployments.
 Insert rows into `projects` and `blog_posts` via the Supabase dashboard's
 Table Editor (or SQL editor) with `published = true` to have them appear on
 the site.
+
+## Velocity Rush (racing game)
+
+The site also hosts a browser-playable 3D supercar racing game with online multiplayer at
+`/racing`. Its source lives in `src/racing/` and the multiplayer server in `racing-server/`.
+See [RACING.md](RACING.md) for controls, features, testing and server deployment.
