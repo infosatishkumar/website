@@ -37,22 +37,60 @@ SOCIAL = {
     "linkedin": "",
 }
 
-# Client logos (images/clients/<slug>.jpg), shown on the home marquee and the Work page.
-CLIENT_LOGOS = [
-    ("makemytrip", "MakeMyTrip"), ("luminous", "Luminous"), ("cuemath", "Cuemath"), ("et-money", "ET Money"),
-    ("mindtickle", "Mindtickle"), ("amagi", "Amagi"), ("loom-solar", "Loom Solar"), ("imarticus-learning", "Imarticus Learning"),
-    ("unlu", "Unlu"), ("amber", "Amber"), ("travel-khana", "Travel Khana"), ("medikoe", "Medikoe"),
-    ("starquik", "StarQuik"), ("hotpack", "Hotpack"), ("dogspot", "DogSpot"), ("orion-sutures", "Orion Sutures"),
-    ("khanna-gems", "Khanna Gems"), ("ojas-ayurveda", "Ojas Ayurveda"), ("greensole", "GreenSole"), ("powermaster", "Powermaster"),
-    ("no-scars", "No Scars"), ("ketomac", "Ketomac"), ("hempstrol", "Hempstrol"), ("mfix", "MFIX"),
-    ("medbilling-experts", "MedBilling Experts"), ("kiran-udyog", "Kiran Udyog"), ("solvabuild", "Solvabuild"), ("unlimited-greens", "Unlimited Greens"),
-    ("letstacle", "Letstacle"), ("centum", "Centum"), ("qmaths", "Qmaths.in"), ("pixel-institute", "Pixel Institute of Photography"),
-    ("getsmartcoders", "getSmartcoders"), ("flatworld-edge", "Flatworld Edge"), ("entermission", "EnterMission"), ("events-high", "Events High"),
-    ("iq4i", "IQ4I"), ("shorewise", "ShoreWise Consulting"), ("medbill", "Medbill"), ("nutrifit", "NutriFit"),
-    ("torque", "Torque"), ("liftup-marketing", "LiftUp Marketing"), ("colonelz", "Colonelz"), ("nurturelabz", "NurtureLabz Consulting"),
-    ("sachin-gujar", "Sachin Gujar & Associates"), ("express-gift-service", "Express Gift Service"), ("homz", "Homz"),
-    ("anthyesti", "Anthyesti"), ("ovntech", "OVN Tech"),
+# Client brands: logo (images/clients/<slug>.jpg), name, industry, one-line description, website.
+# A website is listed only where it has been confirmed; leave "" to show the card without a link.
+CLIENTS = [
+    ("makemytrip", "MakeMyTrip", "Travel", "India's leading online travel company for flights, hotels and holidays.", "https://www.makemytrip.com"),
+    ("luminous", "Luminous", "Energy · Power backup", "Inverters, batteries and solar solutions for homes and businesses.", "https://www.luminousindia.com"),
+    ("cuemath", "Cuemath", "EdTech", "Online maths and coding classes for kids.", "https://www.cuemath.com"),
+    ("et-money", "ET Money", "Fintech", "Investing and money-management app.", "https://www.etmoney.com"),
+    ("mindtickle", "Mindtickle", "SaaS", "Sales readiness and enablement platform.", "https://www.mindtickle.com"),
+    ("amagi", "Amagi", "Media technology", "Cloud technology for broadcast and streaming TV.", "https://www.amagi.com"),
+    ("loom-solar", "Loom Solar", "Solar energy", "Solar panels, inverters and batteries for Indian homes.", "https://www.loomsolar.com"),
+    ("imarticus-learning", "Imarticus Learning", "Education", "Professional courses in finance, analytics and technology.", "https://imarticus.org"),
+    ("unlu", "Unlu", "EdTech · Creators", "Online classes from celebrated creators and artists.", "https://unlu.io"),
+    ("amber", "Amber", "Travel · Student housing", "Student accommodation booking platform.", "https://amberstudent.com"),
+    ("travel-khana", "Travel Khana", "Food delivery", "Food delivery to train passengers across India.", "https://www.travelkhana.com"),
+    ("medikoe", "Medikoe", "Healthtech", "Healthcare platform for doctors, hospitals and diagnostics.", "https://www.medikoe.com"),
+    ("starquik", "StarQuik", "Grocery e-commerce", "Online grocery delivery.", "https://www.starquik.com"),
+    ("hotpack", "Hotpack", "Food packaging", "Food packaging manufacturer and distributor.", "https://www.hotpackglobal.com"),
+    ("dogspot", "DogSpot", "Pet care e-commerce", "Online pet supplies store and pet community.", "https://www.dogspot.in"),
+    ("orion-sutures", "Orion Sutures", "Medical devices", "Surgical sutures manufacturer based in Bengaluru.", ""),
+    ("khanna-gems", "Khanna Gems", "Jewellery", "Certified gemstones and jewellery.", "https://www.khannagems.com"),
+    ("ojas-ayurveda", "Ojas Ayurveda", "Ayurveda · Wellness", "Ayurvedic wellness brand.", ""),
+    ("greensole", "GreenSole", "Sustainability", "Upcycled footwear — a step towards sustainability.", "https://greensole.com"),
+    ("powermaster", "Powermaster", "Industrial", "Brand partner.", ""),
+    ("no-scars", "No Scars", "Skincare · Torque Pharma", "Skincare brand from Torque Pharmaceuticals.", "https://torquepharma.com"),
+    ("ketomac", "Ketomac", "Haircare · Torque Pharma", "Anti-dandruff haircare from Torque Pharmaceuticals.", "https://torquepharma.com/ketomac-shampoo"),
+    ("torque", "Torque", "Pharmaceuticals", "Pharmaceutical company behind No Scars and Ketomac.", "https://torquepharma.com"),
+    ("hempstrol", "Hempstrol", "Hemp wellness", "India's premier hemp company.", "https://hempstrol.com"),
+    ("mfix", "MFIX", "Mobility", "Keeping you on the move.", ""),
+    ("medbilling-experts", "MedBilling Experts", "Healthcare services", "Medical billing services — a Flatworld Solutions company.", "https://www.medbillingexperts.com"),
+    ("kiran-udyog", "Kiran Udyog", "Manufacturing", "Industrial manufacturer.", ""),
+    ("solvabuild", "Solvabuild", "Construction · Prefab", "Innovate · Design · Prefab.", ""),
+    ("unlimited-greens", "Unlimited Greens", "Plants · Greens", "Brand partner.", ""),
+    ("letstacle", "Letstacle", "EdTech", "Helping students around the globe.", "https://letstacle.com"),
+    ("centum", "Centum", "Brand partner", "Brand partner.", ""),
+    ("qmaths", "Qmaths.in", "Exam preparation", "Coaching for SSC, IBPS, Railways, LIC and SIDBI exams.", "https://qmaths.in"),
+    ("pixel-institute", "Pixel Institute of Photography", "Education", "Photography institute in Delhi.", ""),
+    ("getsmartcoders", "getSmartcoders", "IT services", "Software development — a Flatworld Solutions company.", "https://www.getsmartcoders.com"),
+    ("flatworld-edge", "Flatworld Edge", "Outsourcing", "Business outsourcing services.", "https://www.flatworldedge.com"),
+    ("entermission", "EnterMission", "Brand partner", "Brand partner.", ""),
+    ("events-high", "Events High", "Events & experiences", "Discover and book events and experiences.", "https://www.eventshigh.com"),
+    ("iq4i", "IQ4I", "Research & consulting", "Innovation at work.", "https://www.iq4i.com"),
+    ("shorewise", "ShoreWise Consulting", "IT staffing & consulting", "Talent, technology and relationships.", ""),
+    ("medbill", "Medbill", "Healthcare", "Brand partner.", ""),
+    ("nutrifit", "NutriFit", "Nutrition", "Brand partner.", ""),
+    ("liftup-marketing", "LiftUp Marketing", "Marketing", "Brand partner.", ""),
+    ("colonelz", "Colonelz", "Construction · Interiors", "Construction and interior design.", ""),
+    ("nurturelabz", "NurtureLabz Consulting", "Consulting", "Brand partner.", ""),
+    ("sachin-gujar", "Sachin Gujar & Associates", "Chartered accountants", "Chartered accountancy firm.", ""),
+    ("express-gift-service", "Express Gift Service", "Gifting", "Online gift delivery.", ""),
+    ("homz", "Klean Homz", "Home services", "See the difference.", ""),
+    ("anthyesti", "Anthyesti", "Funeral services", "End-to-end funeral and last-rites services.", "https://anthyesti.com"),
+    ("ovntech", "OVN Tech", "Digital transformation", "Digital transformation services.", ""),
 ]
+CLIENT_LOGOS = [(c[0], c[1]) for c in CLIENTS]
 
 
 def client_tile(slug, label, lazy=True):
@@ -69,6 +107,21 @@ def client_marquee():
         rows.append(f'<div class="marquee{" marquee--rev" if i else ""} clogos-row"><div class="marquee__track">{tiles}</div>'
                     f'<div class="marquee__track" aria-hidden="true">{hidden}</div></div>')
     return "\n".join(rows)
+
+
+def client_cards():
+    out = []
+    for slug, name, industry, desc, url in CLIENTS:
+        link = ""
+        if url:
+            host = url.split("//", 1)[1].split("/", 1)[0].replace("www.", "")
+            link = f'<a class="link-arrow ccard__link" href="{url}" target="_blank" rel="noopener">{host} ↗</a>'
+        out.append(
+            f'      <article class="ccard ccard--brand" data-cat="partners" data-reveal>'
+            f'<div class="ccard__brand"><img src="images/clients/{slug}.jpg" alt="{name} logo" width="480" height="240" loading="lazy"></div>'
+            f'<div><h3>{name}</h3><small>{industry}</small></div>'
+            f'<p>{desc}</p>{link}</article>')
+    return "\n".join(out)
 
 
 def client_grid():
@@ -153,6 +206,8 @@ def render(tpl, meta, name):
     }
     if "{{client_marquee}}" in tpl:
         tpl = tpl.replace("{{client_marquee}}", client_marquee())
+    if "{{client_cards}}" in tpl:
+        tpl = tpl.replace("{{client_cards}}", client_cards())
     if "{{client_grid}}" in tpl:
         tpl = tpl.replace("{{client_grid}}", client_grid())
     for k, v in values.items():
