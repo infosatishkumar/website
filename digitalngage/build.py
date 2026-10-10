@@ -124,6 +124,16 @@ def client_cards():
     return "\n".join(out)
 
 
+def client_wall():
+    """'Trusted by 50+ brands' logo wall section (Work and Contact pages)."""
+    return ('<section class="section white" data-nav-light id="brands">\n  <div class="wrap">\n    <div class="sec-head">\n      <div>\n'
+            '        <span class="eyebrow" data-reveal>Brands we\'ve worked with</span>\n'
+            '        <h2 class="h2" data-split>Trusted by <span class="serif grad-text">50+ brands.</span></h2>\n      </div>\n'
+            '      <p class="lead" data-reveal>From startups and D2C labels to listed companies — marketing, websites, design and technology '
+            'for brands across travel, education, health, energy, finance and retail.</p>\n    </div>\n'
+            '    <div class="clogo-grid">\n' + client_grid() + '\n    </div>\n  </div>\n</section>\n')
+
+
 def client_grid():
     return "\n".join(f'      <div class="clogo-card" data-reveal>{client_tile(s, l)}</div>' for s, l in CLIENT_LOGOS)
 
@@ -206,6 +216,8 @@ def render(tpl, meta, name):
     }
     if "{{client_marquee}}" in tpl:
         tpl = tpl.replace("{{client_marquee}}", client_marquee())
+    if "{{client_wall}}" in tpl:
+        tpl = tpl.replace("{{client_wall}}", client_wall())
     if "{{client_cards}}" in tpl:
         tpl = tpl.replace("{{client_cards}}", client_cards())
     if "{{client_grid}}" in tpl:
