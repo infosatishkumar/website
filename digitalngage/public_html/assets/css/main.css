@@ -825,3 +825,18 @@ html:not(.js-anim) .hscroll { overflow-x: auto; }
   .marquee__track { animation: none !important; }
 }
 .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── Client logos ─────────────────────────────────── */
+.clogo { display: grid; place-items: center; background: #fff; border-radius: 16px; overflow: hidden; }
+.clogo img { width: 100%; height: auto; display: block; }
+.clogos-row { margin-bottom: 14px; }
+.clogos-row .marquee__track { gap: 14px; padding-right: 14px; --dur: 70s; }
+.clogos-row .clogo { width: 190px; flex-shrink: 0; border: 1px solid var(--line); transition: transform .4s var(--ease), box-shadow .4s var(--ease); }
+.clogos-row .clogo:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.clogos-names { margin-top: 26px; }
+.clogo-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; }
+.clogo-card .clogo { border: 1px solid var(--line); transition: transform .45s var(--ease), box-shadow .45s var(--ease), border-color .3s; }
+.clogo-card .clogo:hover { transform: translateY(-6px) scale(1.03); box-shadow: var(--shadow); border-color: var(--orange); }
+@media (max-width: 1100px) { .clogo-grid { grid-template-columns: repeat(5, 1fr); } }
+@media (max-width: 760px) { .clogo-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; } .clogos-row .clogo { width: 150px; } }
+@media (max-width: 330px) { .clogo-grid { grid-template-columns: repeat(2, 1fr); } }

@@ -37,6 +37,44 @@ SOCIAL = {
     "linkedin": "",
 }
 
+# Client logos (images/clients/<slug>.jpg), shown on the home marquee and the Work page.
+CLIENT_LOGOS = [
+    ("makemytrip", "MakeMyTrip"), ("luminous", "Luminous"), ("cuemath", "Cuemath"), ("et-money", "ET Money"),
+    ("mindtickle", "Mindtickle"), ("amagi", "Amagi"), ("loom-solar", "Loom Solar"), ("imarticus-learning", "Imarticus Learning"),
+    ("unlu", "Unlu"), ("amber", "Amber"), ("travel-khana", "Travel Khana"), ("medikoe", "Medikoe"),
+    ("starquik", "StarQuik"), ("hotpack", "Hotpack"), ("dogspot", "DogSpot"), ("orion-sutures", "Orion Sutures"),
+    ("khanna-gems", "Khanna Gems"), ("ojas-ayurveda", "Ojas Ayurveda"), ("greensole", "GreenSole"), ("powermaster", "Powermaster"),
+    ("no-scars", "No Scars"), ("ketomac", "Ketomac"), ("hempstrol", "Hempstrol"), ("mfix", "MFIX"),
+    ("medbilling-experts", "MedBilling Experts"), ("kiran-udyog", "Kiran Udyog"), ("solvabuild", "Solvabuild"), ("unlimited-greens", "Unlimited Greens"),
+    ("letstacle", "Letstacle"), ("centum", "Centum"), ("qmaths", "Qmaths.in"), ("pixel-institute", "Pixel Institute of Photography"),
+    ("getsmartcoders", "getSmartcoders"), ("flatworld-edge", "Flatworld Edge"), ("entermission", "EnterMission"), ("events-high", "Events High"),
+    ("iq4i", "IQ4I"), ("shorewise", "ShoreWise Consulting"), ("medbill", "Medbill"), ("nutrifit", "NutriFit"),
+    ("torque", "Torque"), ("liftup-marketing", "LiftUp Marketing"), ("colonelz", "Colonelz"), ("nurturelabz", "NurtureLabz Consulting"),
+    ("sachin-gujar", "Sachin Gujar & Associates"), ("express-gift-service", "Express Gift Service"), ("homz", "Homz"),
+    ("anthyesti", "Anthyesti"), ("ovntech", "OVN Tech"),
+]
+
+
+def client_tile(slug, label, lazy=True):
+    return (f'<span class="clogo"><img src="images/clients/{slug}.jpg" alt="{label}" width="480" height="240"'
+            f'{" loading=\"lazy\"" if lazy else ""}></span>')
+
+
+def client_marquee():
+    half = (len(CLIENT_LOGOS) + 1) // 2
+    rows = []
+    for i, part in enumerate((CLIENT_LOGOS[:half], CLIENT_LOGOS[half:])):
+        tiles = "".join(client_tile(s, l, lazy=False) for s, l in part)
+        hidden = "".join(client_tile(s, "", lazy=False).replace('alt=""', 'alt="" aria-hidden="true"') for s, _ in part)
+        rows.append(f'<div class="marquee{" marquee--rev" if i else ""} clogos-row"><div class="marquee__track">{tiles}</div>'
+                    f'<div class="marquee__track" aria-hidden="true">{hidden}</div></div>')
+    return "\n".join(rows)
+
+
+def client_grid():
+    return "\n".join(f'      <div class="clogo-card" data-reveal>{client_tile(s, l)}</div>' for s, l in CLIENT_LOGOS)
+
+
 _S = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'
 ICONS = {
     "arrow": f'<svg class="arrow" {_S}><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
@@ -110,8 +148,13 @@ def render(tpl, meta, name):
         "og_image": meta.get("og_image", "images/og.jpg"),
         "version": VERSION,
         "social": social,
+        "client_count": str(len(CLIENT_LOGOS)),
         "base": '<base href="/">\n' if meta.get("base") == "root" else "",
     }
+    if "{{client_marquee}}" in tpl:
+        tpl = tpl.replace("{{client_marquee}}", client_marquee())
+    if "{{client_grid}}" in tpl:
+        tpl = tpl.replace("{{client_grid}}", client_grid())
     for k, v in values.items():
         tpl = tpl.replace("{{" + k + "}}", v)
     left = re.findall(r"\{\{[^}]+\}\}", tpl)
