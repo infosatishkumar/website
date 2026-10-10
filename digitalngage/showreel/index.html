@@ -93,10 +93,11 @@ img{ display:block; }
 .batag{ position:absolute; top:40px; padding:12px 24px; border-radius:999px; font-family:Sora,sans-serif; font-weight:800; font-size:26px; letter-spacing:.14em; }
 .bigline{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:170px; }
 /* clients */
-.crow{ position:absolute; left:0; white-space:nowrap; font-family:Sora,sans-serif; font-weight:800; font-size:110px; letter-spacing:-.04em; color:rgba(255,255,255,.07); }
-.crow span{ margin-right:90px; }
-.crow span.f{ color:rgba(255,90,31,.13); }
-.cstat{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.crow{ position:absolute; left:0; display:flex; gap:22px; white-space:nowrap; }
+.crow img{ width:300px; height:150px; border-radius:22px; flex:0 0 300px; box-shadow:0 20px 40px -18px rgba(0,0,0,.6); }
+#cli-dim{ position:absolute; inset:0; background:rgba(10,10,20,.35); }
+.cstat{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.cpanel{ display:flex; flex-direction:column; align-items:center; padding:56px 110px 64px; border-radius:48px; background:rgba(10,10,20,.94); box-shadow:0 40px 120px -20px rgba(0,0,0,.8); }
 .cstat b{ font-family:Sora,sans-serif; font-weight:800; font-size:340px; letter-spacing:-.07em; line-height:.9; font-variant-numeric:tabular-nums; }
 .cstat span{ font-family:Sora,sans-serif; font-weight:700; font-size:46px; letter-spacing:.3em; margin-top:26px; }
 /* outro */
@@ -236,13 +237,14 @@ img{ display:block; }
 
     <!-- 8. CLIENTS -->
     <section class="scene" id="s-cli">
-      <div class="crow" id="cr0" style="top:90px"></div>
-      <div class="crow" id="cr1" style="top:300px"></div>
-      <div class="crow" id="cr2" style="top:510px"></div>
-      <div class="crow" id="cr3" style="top:720px"></div>
-      <div class="cstat" id="cs0"><b class="o" id="cn0">7+</b><span>BRANDS MANAGED</span></div>
-      <div class="cstat" id="cs1"><b id="cn1">100%</b><span>CLIENT RETENTION</span></div>
-      <div class="cstat" id="cs2"><b class="o" id="cn2">3x–10x</b><span>AVERAGE ROAS</span></div>
+      <div class="crow" id="cr0" style="top:58px"></div>
+      <div class="crow" id="cr1" style="top:328px"></div>
+      <div class="crow" id="cr2" style="top:598px"></div>
+      <div class="crow" id="cr3" style="top:868px"></div>
+      <div id="cli-dim"></div>
+      <div class="cstat" id="cs0"><div class="cpanel"><b class="o" id="cn0">50+</b><span>BRANDS WE'VE WORKED WITH</span></div></div>
+      <div class="cstat" id="cs1"><div class="cpanel"><b id="cn1">100%</b><span>CLIENT RETENTION</span></div></div>
+      <div class="cstat" id="cs2"><div class="cpanel"><b class="o" id="cn2">3x–10x</b><span>AVERAGE ROAS</span></div></div>
     </section>
 
     <!-- 9. OUTRO -->

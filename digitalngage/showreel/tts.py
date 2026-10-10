@@ -23,7 +23,7 @@ LINES = [
     (22.8, "For KIO Organics, we built a premium online store. Eight ways to pay, every payment verified — plus the social media and ads that drive the sales."),
     (32.2, "For Metro Puf Industries, a custom CRM that turns every enquiry into a follow-up. Over six thousand leads, in one place."),
     (41.5, "And our own website? Rebuilt from the ground up."),
-    (47.2, "Seven-plus brands. One hundred percent retention."),
+    (47.2, "Fifty-plus brands. One hundred percent retention."),
     (52.8, "DigitalNgage. Let's grow your brand. Book your free audit today."),
 ]
 

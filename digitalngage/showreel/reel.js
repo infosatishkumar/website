@@ -114,10 +114,15 @@
     d.innerHTML = '<div class="browser"><div class="bbar"><i></i><i></i><i></i><span>Metro CRM · ' + c[1] + '</span></div><img src="assets/crm-' + c[0] + '.jpg" style="width:1100px"></div>';
     dk.appendChild(d);
   });
-  var CLIENTS = ["Metro Puf Industries", "KIO Organics", "Delta Infrastructures", "Fenatek", "Honoon Oil", "MIAS International", "Promag Engineering"];
+  // client logo wall: the same logos as the website's Work page
+  var LOGOS = ["makemytrip", "luminous", "cuemath", "et-money", "mindtickle", "amagi", "loom-solar", "imarticus-learning", "unlu", "amber", "travel-khana", "medikoe",
+    "starquik", "hotpack", "dogspot", "orion-sutures", "khanna-gems", "ojas-ayurveda", "greensole", "powermaster", "no-scars", "ketomac", "hempstrol", "mfix",
+    "medbilling-experts", "kiran-udyog", "solvabuild", "unlimited-greens", "letstacle", "centum", "qmaths", "pixel-institute", "getsmartcoders", "flatworld-edge",
+    "entermission", "events-high", "iq4i", "shorewise", "medbill", "nutrifit", "torque", "liftup-marketing", "colonelz", "nurturelabz", "sachin-gujar",
+    "express-gift-service", "homz", "anthyesti", "ovntech"];
   for (var r = 0; r < 4; r++) {
     var html = "";
-    for (var k = 0; k < 4; k++) CLIENTS.forEach(function (c, j) { html += '<span class="' + ((j + r) % 3 === 0 ? "f" : "") + '">' + c + '</span>'; });
+    for (var k = 0; k < 26; k++) html += '<img src="../public_html/images/clients/' + LOGOS[(r * 13 + k * 2 + r) % LOGOS.length] + '.jpg">';
     $("#cr" + r).innerHTML = html;
   }
 
@@ -384,12 +389,13 @@
   scene("#s-cli", T_CLI, at(28));
   sfx("impact", T_CLI, { gain: 0.9 }); flash(T_CLI, "#fff", 0.7, 0.2);
   [0, 1, 2, 3].forEach(function (r) {
-    tl.fromTo("#cr" + r, { x: r % 2 ? -2600 : 0 }, { x: r % 2 ? 0 : -2600, duration: at(28) - T_CLI, ease: "none" }, T_CLI);
+    tl.fromTo("#cr" + r, { x: r % 2 ? -3600 : -400 }, { x: r % 2 ? -1000 : -3000, duration: at(28) - T_CLI, ease: "none" }, T_CLI);
+    tl.fromTo("#cr" + r + " img", { y: 260 * (r % 2 ? -1 : 1), opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "expo.out", stagger: 0.012 }, T_CLI + r * 0.05);
   });
-  [["#cs0", "#cn0", 0, 7, function (v) { return Math.round(v) + "+"; }], ["#cs1", "#cn1", 0, 100, function (v) { return Math.round(v) + "%"; }], ["#cs2", "#cn2", 3, 10, function (v) { return "3x–" + Math.round(v) + "x"; }]].forEach(function (c, i) {
+  [["#cs0", "#cn0", 0, 50, function (v) { return Math.round(v) + "+"; }], ["#cs1", "#cn1", 0, 100, function (v) { return Math.round(v) + "%"; }], ["#cs2", "#cn2", 3, 10, function (v) { return "3x–" + Math.round(v) + "x"; }]].forEach(function (c, i) {
     var t = at(25 + i); // one bar per stat
     show(c[0], t, at(26 + i));
-    slam(c[0] + " b", t, 2.4, 0.3);
+    slam(c[0] + " .cpanel", t, 1.8, 0.3);
     tl.fromTo(c[0] + " span", { opacity: 0, letterSpacing: "0.8em" }, { opacity: 1, letterSpacing: "0.3em", duration: 0.5, ease: "power3.out" }, t + 0.1);
     counter($(c[1]), t, c[2], c[3], 0.7, c[4]);
     sfx("hit", t, { gain: 0.95 }); punch(t, 1.05);
