@@ -15,3 +15,8 @@ Options -Indexes
   ExpiresByType application/javascript "access plus 1 month"
   ExpiresByType text/html "access plus 0 seconds"
 </IfModule>
+
+# Never serve the SMTP settings file (it holds the mailbox password)
+<FilesMatch "^smtp-config(\.sample)?\.php$">
+  Require all denied
+</FilesMatch>
