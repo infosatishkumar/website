@@ -45,6 +45,23 @@ Open [http://localhost:3000](http://localhost:3000).
 Set the same variables in the Vercel project's Environment Variables settings
 for production/preview deployments.
 
+## Social Agent (`/agent`)
+
+A private dashboard (not linked from the nav, `noindex`) where the owner chats
+with a Claude agent that manages their Facebook Page, Instagram, YouTube, X and
+LinkedIn: posting (with images attached in chat), video uploads from a URL,
+reading and replying to comments, and reading and sending DMs.
+
+- **Keys:** the Anthropic API key and each platform's access token are entered
+  on the page's Settings tab and stored only in that browser's `localStorage`.
+  They are sent with each request; the server stores nothing and needs no
+  environment variables.
+- **Approval:** every publish/send action appears as an editable approval card
+  and runs only when the owner clicks Approve (or turns on auto-approve).
+- **Code:** `src/lib/social/` (agent + platform actions) and
+  `src/app/api/agent/` (chat, image upload, approved-action execution,
+  connection test).
+
 ## Adding content
 
 Insert rows into `projects` and `blog_posts` via the Supabase dashboard's

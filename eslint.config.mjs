@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Standalone CLI with its own package and tsconfig.
-    "social-agent/**",
   ]),
 ]);
 
