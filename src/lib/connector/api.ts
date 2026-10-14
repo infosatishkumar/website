@@ -19,7 +19,12 @@ async function call<T>(action: string, init?: RequestInit): Promise<T> {
     headers: { "X-SMC": "1", ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...init?.headers },
   });
   const type = res.headers.get("content-type") ?? "";
-  if (!type.includes("application/json")) throw new ApiError("Backend not available", 0);
+  if (!type.includes("application/json")) {
+    throw new ApiError(
+      res.status === 404 || res.ok ? "Backend not available" : `Server error (${res.status}). Open Server check for details.`,
+      res.status === 404 || res.ok ? 0 : res.status,
+    );
+  }
   const data = await res.json();
   if (!res.ok) throw new ApiError(data?.error ?? `Request failed (${res.status})`, res.status);
   return data as T;
@@ -43,3 +48,16 @@ export async function uploadImage(file: File): Promise<string> {
 }
 
 export const META_CONNECT_URL = `${BASE}meta_connect`;
+
+export type Health = { ok: boolean; problems: string[]; info: { php: string; config_expected_at?: string } };
+
+/** Setup check; null when there is no backend on this site at all. */
+export async function checkHealth(): Promise<Health | null> {
+  try {
+    const res = await fetch("/api/health.php", { cache: "no-store" });
+    if (!(res.headers.get("content-type") ?? "").includes("application/json")) return null;
+    return (await res.json()) as Health;
+  } catch {
+    return null;
+  }
+}

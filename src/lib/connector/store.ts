@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { NetworkId } from "@/components/connector/SocialIcon";
-import { ApiError, type BackendStatus, get, post } from "./api";
+import { ApiError, type BackendStatus, checkHealth, get, type Health, post } from "./api";
 
 /*
  * Client-side workspace store for the dashboard demo.
@@ -173,10 +173,11 @@ export function useWorkspace(): State {
 
 /* ---- live mode (Hostinger backend) ---- */
 
-export type Live = { checked: boolean; status: BackendStatus | null };
-let live: Live = { checked: false, status: null };
+/** health: setup check result, null when the site has no backend at all. */
+export type Live = { checked: boolean; status: BackendStatus | null; health: Health | null };
+let live: Live = { checked: false, status: null, health: null };
 const liveListeners = new Set<() => void>();
-const SERVER_LIVE: Live = { checked: false, status: null };
+const SERVER_LIVE: Live = { checked: false, status: null, health: null };
 
 function setLive(next: Live) {
   live = next;
@@ -199,12 +200,10 @@ export const isLive = () => !!live.status?.backend && live.status.loggedIn;
 /** Detects the backend once; in live mode accounts and posts come from the server. */
 export async function initLive(force = false) {
   if (live.checked && !force) return;
-  try {
-    const status = await get<BackendStatus>("status");
-    setLive({ checked: true, status });
-    if (status.loggedIn) await refreshLive();
-  } catch {
-    setLive({ checked: true, status: null });
+  const [status, health] = await Promise.all([get<BackendStatus>("status").catch(() => null), checkHealth()]);
+  setLive({ checked: true, status, health });
+  if (status?.loggedIn) {
+    await refreshLive().catch(() => undefined);
   }
 }
 

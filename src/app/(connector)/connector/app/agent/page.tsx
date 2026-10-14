@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "@/components/connector/Icon";
 import SocialIcon from "@/components/connector/SocialIcon";
 import { Card, PageHeader, StatusBadge, Toggle } from "@/components/connector/app/ui";
+import { SetupProblems } from "@/components/connector/app/SetupCheck";
 import { get, post, uploadImage } from "@/lib/connector/api";
 import { APP } from "@/lib/connector/data";
 import { publishNow, refreshLive, reportError, setAutopublishLocal, useLive, useWorkspace } from "@/lib/connector/store";
@@ -70,6 +71,9 @@ export default function AgentPage() {
               It uses your Claude API key, which must stay on the server. Upload the site with the backend, fill in
               smc-config.php and log in — the agent will appear here.
             </p>
+            <div className="mt-6 w-full max-w-xl text-left">
+              <SetupProblems />
+            </div>
           </div>
         </Card>
       </>
@@ -104,11 +108,9 @@ export default function AgentPage() {
         }
       />
 
-      {!status?.configured.anthropic && (
-        <p className="mb-4 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">
-          Add your Claude API key (anthropic_api_key) to smc-config.php to use the agent.
-        </p>
-      )}
+      <div className="mb-4">
+        <SetupProblems compact />
+      </div>
       {ws.accounts.length === 0 && (
         <p className="mb-4 rounded-xl bg-[#fff3d1] px-4 py-3 text-sm font-medium text-ink">
           No accounts connected yet. <Link href={`${APP}/accounts/create`} className="font-bold text-primary">Connect Facebook &amp; Instagram</Link> so the agent can post.

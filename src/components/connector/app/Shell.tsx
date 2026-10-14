@@ -8,6 +8,7 @@ import Icon from "../Icon";
 import { APP, BASE } from "@/lib/connector/data";
 import { initLive, logout, reportError, resetWorkspace, useLive, useWorkspace } from "@/lib/connector/store";
 import LoginScreen from "./LoginScreen";
+import SetupScreen from "./SetupCheck";
 
 type NavItem = { href: string; label: string; icon: string };
 type NavSection = { title?: string; items: NavItem[] };
@@ -76,7 +77,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     setOpen(false);
   }
   const ws = useWorkspace();
-  const { checked, status } = useLive();
+  const { checked, status, health } = useLive();
   useEffect(() => {
     initLive();
   }, []);
@@ -130,6 +131,10 @@ export default function Shell({ children }: { children: ReactNode }) {
 
   if (!checked) {
     return <div className="flex min-h-screen items-center justify-center bg-canvas text-muted">Loading…</div>;
+  }
+  // Backend files exist but the API can't start (config missing, old PHP…).
+  if (!status && health) {
+    return <SetupScreen />;
   }
   if (status?.backend && !status.loggedIn) {
     return <LoginScreen />;

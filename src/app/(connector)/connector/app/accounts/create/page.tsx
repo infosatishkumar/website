@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Icon from "@/components/connector/Icon";
 import SocialIcon, { networkIds, networkMeta, type NetworkId } from "@/components/connector/SocialIcon";
-import { Card, DemoNote, Modal, PageHeader } from "@/components/connector/app/ui";
+import { Card, Modal, PageHeader } from "@/components/connector/app/ui";
+import { SetupProblems } from "@/components/connector/app/SetupCheck";
 import { APP } from "@/lib/connector/data";
 import { META_CONNECT_URL } from "@/lib/connector/api";
 import { uid, update, useLive, useWorkspace } from "@/lib/connector/store";
@@ -56,15 +57,20 @@ export default function ConnectAccount() {
             {!status?.configured.meta && (
               <p className="mt-1 text-sm font-bold text-danger">Add meta_app_id and meta_app_secret to smc-config.php first.</p>
             )}
+            <div className="mt-3"><SetupProblems compact /></div>
           </div>
           <a href={META_CONNECT_URL} className={`btn btn-primary ${status?.configured.meta ? "" : "pointer-events-none opacity-40"}`}>
             <Icon name="plug" size={18} /> Connect with Facebook
           </a>
         </div>
       ) : (
-        <DemoNote>
-          Demo mode: this simulates the login step. On your Hostinger site the Facebook button above opens the real Meta login.
-        </DemoNote>
+        <div className="mb-6 space-y-3">
+          <SetupProblems />
+          <p className="text-sm text-ink-2">
+            Demo mode: the tiles below only simulate a connection. Real Facebook &amp; Instagram login appears here once the
+            backend is running and you are logged in.
+          </p>
+        </div>
       )}
       <Card>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

@@ -1,10 +1,10 @@
-# Only index.php and cron.php are reachable; everything else in /api is private.
+# Only index.php, cron.php and health.php are reachable; everything else in /api is private.
 Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteRule ^(vendor|lib)(/|$) - [F,L]
   RewriteRule ^composer\.(json|lock)$ - [F,L]
 </IfModule>
-<FilesMatch "^(?!(index|cron)\.php$).*\.php$">
+<FilesMatch "^(?!(index|cron|health)\.php$).*\.php$">
   Require all denied
 </FilesMatch>
