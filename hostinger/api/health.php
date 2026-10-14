@@ -50,8 +50,6 @@ if (!$configFile) {
         }
         if (empty($cfg['anthropic_api_key'])) {
             $problems[] = 'anthropic_api_key is empty — the AI Agent needs it (console.anthropic.com → API Keys).';
-        } elseif (strpos($cfg['anthropic_api_key'], 'sk-ant-api') !== 0) {
-            $problems[] = 'anthropic_api_key does not look like an API key. It must start with sk-ant-api (create one at console.anthropic.com → API Keys).';
         }
         if (empty($cfg['meta_app_id']) || empty($cfg['meta_app_secret'])) {
             $problems[] = 'meta_app_id / meta_app_secret are empty — Facebook & Instagram cannot connect until you add them.';
