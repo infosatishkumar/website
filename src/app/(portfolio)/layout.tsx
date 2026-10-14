@@ -25,7 +25,11 @@ export const metadata: Metadata = {
     "Satish Kumar is a creative motion graphic designer, animator, and published author based in Bengaluru.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
