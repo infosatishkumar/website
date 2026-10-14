@@ -19,12 +19,14 @@ echo "→ Building static site"
 (cd "$WORK" && HOSTINGER_EXPORT=1 npx next build)
 
 echo "→ Installing PHP backend"
-(cd "$ROOT/hostinger/api" && composer install --no-dev --optimize-autoloader --no-interaction --quiet)
+(cd "$ROOT/hostinger/api" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --quiet)
 
 SITE="$WORK/out"
 rm -f "$SITE"/{file,globe,next,vercel,window}.svg
 cp -r "$ROOT/hostinger/api" "$SITE/api"
 rm -f "$SITE/api/composer.json" "$SITE/api/composer.lock"
+# Ship only library code: drop VCS metadata, tests and docs from vendor/.
+find "$SITE/api/vendor" -depth \( -name .git -o -name .github -o -name tests -o -name Tests -o -name examples -o -name fixtures -o -name docs \) -type d -exec rm -rf {} +
 mkdir -p "$SITE/uploads"
 cp "$ROOT/hostinger/public/.htaccess" "$SITE/.htaccess"
 cp "$ROOT/hostinger/public/uploads.htaccess" "$SITE/uploads/.htaccess"
