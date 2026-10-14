@@ -53,13 +53,21 @@ function meta_redirect_uri(): string
 
 function meta_login_url(string $state): string
 {
-    return 'https://www.facebook.com/' . config()['graph_version'] . '/dialog/oauth?' . http_build_query([
+    $params = [
         'client_id' => config()['meta_app_id'],
         'redirect_uri' => meta_redirect_uri(),
         'state' => $state,
-        'scope' => implode(',', META_SCOPES),
         'response_type' => 'code',
-    ]);
+    ];
+    // "Facebook Login for Business" apps pick permissions from a saved configuration.
+    $configId = trim((string) (config()['meta_config_id'] ?? ''));
+    if ($configId !== '') {
+        $params['config_id'] = $configId;
+        $params['override_default_response_type'] = 'true';
+    } else {
+        $params['scope'] = implode(',', META_SCOPES);
+    }
+    return 'https://www.facebook.com/' . config()['graph_version'] . '/dialog/oauth?' . http_build_query($params);
 }
 
 /** Exchanges the OAuth code and stores every Page (and its linked Instagram account). Returns count. */

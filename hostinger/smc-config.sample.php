@@ -22,6 +22,8 @@ return [
     // Meta app from developers.facebook.com (Facebook Login for Business).
     'meta_app_id' => '',
     'meta_app_secret' => '',
+    // Facebook Login for Business → Configurations → Configuration ID (leave empty for classic Facebook Login).
+    'meta_config_id' => '',
     'graph_version' => 'v23.0',
 
     // Random string; protects the web-triggered cron URL.
