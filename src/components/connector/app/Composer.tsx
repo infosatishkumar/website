@@ -8,7 +8,8 @@ import SocialIcon, { networkMeta, type NetworkId } from "../SocialIcon";
 import AccountPicker from "./AccountPicker";
 import { Card, DemoNote, PageHeader } from "./ui";
 import { APP } from "@/lib/connector/data";
-import { addPost, type PostStatus, useWorkspace, type QueueSlot } from "@/lib/connector/store";
+import { uploadImage } from "@/lib/connector/api";
+import { addPost, type PostStatus, reportError, useLive, useWorkspace, type QueueSlot } from "@/lib/connector/store";
 
 const limits: Record<NetworkId, number> = {
   x: 280, bluesky: 300, threads: 500, pinterest: 500, google: 1500, instagram: 2200,
@@ -82,6 +83,9 @@ async function toThumb(file: File): Promise<string> {
 
 export default function Composer() {
   const ws = useWorkspace();
+  const { status: liveStatus } = useLive();
+  const live = !!liveStatus?.loggedIn;
+  const [busy, setBusy] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
   const [selected, setSelected] = useState<string[]>([]);
@@ -117,18 +121,38 @@ export default function Composer() {
     });
   };
 
-  const submit = (status: PostStatus, mode: "now" | "time" | "queue" | "draft") => {
-    if (!canSubmit && status !== "draft") return;
+  const submit = async (status: PostStatus, mode: "now" | "time" | "queue" | "draft") => {
+    if ((!canSubmit && status !== "draft") || busy) return;
+    if (live && status !== "draft" && nets.includes("instagram") && media.length === 0) {
+      reportError(new Error("Instagram needs at least one image."));
+      return;
+    }
     let at = new Date();
     if (mode === "time") at = new Date(when);
     if (mode === "queue") at = nextQueueSlot(ws.queue, ws.posts.map((p) => p.scheduledAt));
-    addPost({ text, accountIds: selected, scheduledAt: at.toISOString(), status, tagIds, media, author: "You" });
-    const label =
-      status === "published" ? "Published" : status === "draft" ? "Saved as draft" : status === "pending" ? "Sent for approval" : `Scheduled for ${at.toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`;
-    setSaved(label);
-    setText("");
-    setMedia([]);
-    setTagIds([]);
+    setBusy(true);
+    try {
+      const created = await addPost({ text, accountIds: selected, scheduledAt: at.toISOString(), status, tagIds, media, author: "You" });
+      const errors = Object.values(created.result ?? {}).filter((r) => !r.ok).map((r) => r.error);
+      const label =
+        created.status === "failed"
+          ? `Publishing failed: ${errors.join("; ")}`
+          : status === "published"
+            ? errors.length ? `Published, with errors: ${errors.join("; ")}` : "Published"
+            : status === "draft"
+              ? "Saved as draft"
+              : status === "pending"
+                ? "Sent for approval"
+                : `Scheduled for ${at.toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`;
+      setSaved(label);
+      setText("");
+      setMedia([]);
+      setTagIds([]);
+    } catch (e) {
+      reportError(e);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -182,9 +206,14 @@ export default function Composer() {
                 hidden
                 onChange={async (e) => {
                   const files = Array.from(e.target.files ?? []).slice(0, 6);
-                  const thumbs = await Promise.all(files.map(toThumb));
-                  setMedia((m) => [...m, ...thumbs].slice(0, 10));
                   e.target.value = "";
+                  try {
+                    // Live: upload to the server so networks can fetch a public URL.
+                    const urls = await Promise.all(files.map(live ? uploadImage : toThumb));
+                    setMedia((m) => [...m, ...urls].slice(0, 10));
+                  } catch (err) {
+                    reportError(err);
+                  }
                 }}
               />
             </div>
@@ -251,15 +280,15 @@ export default function Composer() {
                 Schedule for
                 <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="field mt-1.5" />
               </label>
-              <button type="button" disabled={!canSubmit} onClick={() => submit("scheduled", "time")} className="btn btn-primary disabled:opacity-40">
+              <button type="button" disabled={!canSubmit || busy} onClick={() => submit("scheduled", "time")} className="btn btn-primary disabled:opacity-40">
                 <Icon name="calendar" size={18} /> Schedule
               </button>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
-              <button type="button" disabled={!canSubmit} onClick={() => submit("scheduled", "queue")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="clock" size={16} /> Add to queue</button>
-              <button type="button" disabled={!canSubmit} onClick={() => submit("published", "now")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="send" size={16} /> Post now</button>
-              <button type="button" disabled={!canSubmit} onClick={() => submit("pending", "time")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="checkCircle" size={16} /> Send for approval</button>
-              <button type="button" disabled={!text.trim()} onClick={() => submit("draft", "draft")} className="btn btn-ghost btn-sm disabled:opacity-40"><Icon name="doc" size={16} /> Save draft</button>
+              <button type="button" disabled={!canSubmit || busy} onClick={() => submit("scheduled", "queue")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="clock" size={16} /> Add to queue</button>
+              <button type="button" disabled={!canSubmit || busy} onClick={() => submit("published", "now")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="send" size={16} /> Post now</button>
+              <button type="button" disabled={!canSubmit || busy} onClick={() => submit("pending", "time")} className="btn btn-outline btn-sm disabled:opacity-40"><Icon name="checkCircle" size={16} /> Send for approval</button>
+              <button type="button" disabled={!text.trim() || busy} onClick={() => submit("draft", "draft")} className="btn btn-ghost btn-sm disabled:opacity-40"><Icon name="doc" size={16} /> Save draft</button>
             </div>
             {!canSubmit && (
               <p className="mt-3 text-xs text-muted">
@@ -330,7 +359,7 @@ export default function Composer() {
               </>
             )}
           </Card>
-          <DemoNote>Posts are saved to this browser. Connect network APIs on a backend to publish for real.</DemoNote>
+          {!live && <DemoNote>Demo mode: posts are saved to this browser only. On your Hostinger site with the backend set up, they publish for real.</DemoNote>}
         </div>
       </div>
     </>

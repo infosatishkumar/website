@@ -5,7 +5,7 @@ import { useState } from "react";
 import Icon from "@/components/connector/Icon";
 import { AccountChip, Card, Empty, PageHeader, StatusBadge } from "@/components/connector/app/ui";
 import { APP } from "@/lib/connector/data";
-import { patchPost, useWorkspace } from "@/lib/connector/store";
+import { patchPost, reportError, useWorkspace } from "@/lib/connector/store";
 
 export default function ApprovalsPage() {
   const ws = useWorkspace();
@@ -48,9 +48,9 @@ export default function ApprovalsPage() {
                   <p className="mt-3 text-ink">{p.text}</p>
                   <p className="mt-1 text-xs text-muted">Submitted by {p.author}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button type="button" onClick={() => patchPost(p.id, { status: "scheduled" })} className="btn btn-primary btn-sm"><Icon name="check" size={16} /> Approve</button>
+                    <button type="button" onClick={() => patchPost(p.id, { status: "scheduled" }).catch(reportError)} className="btn btn-primary btn-sm"><Icon name="check" size={16} /> Approve</button>
                     {tab === "pending" && (
-                      <button type="button" onClick={() => patchPost(p.id, { status: "rejected" })} className="btn btn-outline btn-sm">Request changes</button>
+                      <button type="button" onClick={() => patchPost(p.id, { status: "rejected" }).catch(reportError)} className="btn btn-outline btn-sm">Request changes</button>
                     )}
                   </div>
                 </li>

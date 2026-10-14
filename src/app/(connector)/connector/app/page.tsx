@@ -1,6 +1,14 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { APP } from "@/lib/connector/data";
 
+/** Client-side redirect so it also works on static hosting. */
 export default function AppIndex() {
-  redirect(`${APP}/launchpad`);
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(`${APP}/launchpad/`);
+  }, [router]);
+  return null;
 }

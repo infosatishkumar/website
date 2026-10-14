@@ -6,7 +6,8 @@ import Icon from "@/components/connector/Icon";
 import SocialIcon, { networkIds, networkMeta, type NetworkId } from "@/components/connector/SocialIcon";
 import { Card, DemoNote, Modal, PageHeader } from "@/components/connector/app/ui";
 import { APP } from "@/lib/connector/data";
-import { uid, update, useWorkspace } from "@/lib/connector/store";
+import { META_CONNECT_URL } from "@/lib/connector/api";
+import { uid, update, useLive, useWorkspace } from "@/lib/connector/store";
 
 const kinds: Partial<Record<NetworkId, string>> = {
   facebook: "Page or Group",
@@ -18,6 +19,8 @@ const kinds: Partial<Record<NetworkId, string>> = {
 
 export default function ConnectAccount() {
   const ws = useWorkspace();
+  const { status } = useLive();
+  const live = !!status?.loggedIn;
   const router = useRouter();
   const [net, setNet] = useState<NetworkId | null>(null);
   const [name, setName] = useState("");
@@ -39,9 +42,30 @@ export default function ConnectAccount() {
   return (
     <>
       <PageHeader title="Connect account" sub="Choose a network to add a profile, page or channel." />
-      <DemoNote>
-        This preview simulates the OAuth step. In production each tile hands off to the network&apos;s official login and stores the access token server-side.
-      </DemoNote>
+      {live ? (
+        <div className="card mb-6 flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
+          <span className="flex gap-2">
+            <SocialIcon id="facebook" size={44} />
+            <SocialIcon id="instagram" size={44} />
+          </span>
+          <div className="flex-1">
+            <p className="font-bold text-ink">Facebook Pages &amp; Instagram Business</p>
+            <p className="text-sm text-ink-2">
+              Log in with Facebook and pick your Pages. Instagram Business accounts linked to those Pages are added automatically.
+            </p>
+            {!status?.configured.meta && (
+              <p className="mt-1 text-sm font-bold text-danger">Add meta_app_id and meta_app_secret to smc-config.php first.</p>
+            )}
+          </div>
+          <a href={META_CONNECT_URL} className={`btn btn-primary ${status?.configured.meta ? "" : "pointer-events-none opacity-40"}`}>
+            <Icon name="plug" size={18} /> Connect with Facebook
+          </a>
+        </div>
+      ) : (
+        <DemoNote>
+          Demo mode: this simulates the login step. On your Hostinger site the Facebook button above opens the real Meta login.
+        </DemoNote>
+      )}
       <Card>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {networkIds.map((n) => {
@@ -50,20 +74,27 @@ export default function ConnectAccount() {
               <button
                 key={n}
                 type="button"
+                disabled={live}
                 onClick={() => {
                   setNet(n);
                   setName("");
                   setHandle("");
                   setStep("form");
                 }}
-                className="group flex flex-col items-center gap-3 rounded-2xl border border-line p-6 transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-lg"
+                className="group flex flex-col items-center gap-3 rounded-2xl border border-line p-6 transition-all enabled:hover:-translate-y-0.5 enabled:hover:border-primary enabled:hover:shadow-lg disabled:opacity-60"
               >
                 <SocialIcon id={n} size={52} />
                 <span className="font-bold text-ink">{networkMeta[n].name}</span>
                 <span className="text-xs text-muted">{kinds[n] ?? "Profile"}</span>
-                <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
-                  <Icon name="plus" size={16} /> Connect
-                </span>
+                {live ? (
+                  <span className="text-xs font-bold text-muted">
+                    {n === "facebook" || n === "instagram" ? "Use the Facebook button" : "Coming soon"}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-primary">
+                    <Icon name="plus" size={16} /> Connect
+                  </span>
+                )}
                 {count > 0 && <span className="rounded-full bg-success-tint px-2 py-0.5 text-xs font-bold text-success">{count} connected</span>}
               </button>
             );

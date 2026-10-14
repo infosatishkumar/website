@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Logo from "../Logo";
 import Icon from "../Icon";
 import { APP, BASE } from "@/lib/connector/data";
-import { resetWorkspace, useWorkspace } from "@/lib/connector/store";
+import { initLive, logout, reportError, resetWorkspace, useLive, useWorkspace } from "@/lib/connector/store";
+import LoginScreen from "./LoginScreen";
 
 type NavItem = { href: string; label: string; icon: string };
 type NavSection = { title?: string; items: NavItem[] };
@@ -15,6 +16,7 @@ const nav: NavSection[] = [
   {
     items: [
       { href: `${APP}/launchpad`, label: "Launchpad", icon: "rocket" },
+      { href: `${APP}/agent`, label: "AI Agent", icon: "sparkles" },
       { href: `${APP}/posts`, label: "Create post", icon: "edit" },
       { href: `${APP}/posts/calendar`, label: "Calendar", icon: "calendar" },
       { href: `${APP}/inbox`, label: "Inbox", icon: "inbox" },
@@ -74,6 +76,10 @@ export default function Shell({ children }: { children: ReactNode }) {
     setOpen(false);
   }
   const ws = useWorkspace();
+  const { checked, status } = useLive();
+  useEffect(() => {
+    initLive();
+  }, []);
   const pending = ws.posts.filter((p) => p.status === "pending").length;
   const unread = ws.inbox.filter((c) => !c.read).length;
 
@@ -122,6 +128,13 @@ export default function Shell({ children }: { children: ReactNode }) {
     </nav>
   );
 
+  if (!checked) {
+    return <div className="flex min-h-screen items-center justify-center bg-canvas text-muted">Loading…</div>;
+  }
+  if (status?.backend && !status.loggedIn) {
+    return <LoginScreen />;
+  }
+
   return (
     <div className="flex min-h-screen bg-canvas">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-line bg-white lg:block">{sidebar}</aside>
@@ -142,6 +155,12 @@ export default function Shell({ children }: { children: ReactNode }) {
             <Icon name="search" size={18} />
             <input className="flex-1 bg-transparent text-sm text-ink outline-none" placeholder="Search posts, accounts, reports…" />
           </div>
+          <span
+            className={`hidden rounded-full px-2.5 py-1 text-xs font-bold md:inline ${status?.loggedIn ? "bg-success-tint text-success" : "bg-[#fff3d1] text-[#9a6b00]"}`}
+            title={status?.loggedIn ? "Connected to your server — posts publish for real" : "No backend found — data stays in this browser"}
+          >
+            {status?.loggedIn ? "Live" : "Demo mode"}
+          </span>
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <Link href={`${APP}/posts`} className="btn btn-primary btn-sm">
               <Icon name="plus" size={16} /> <span className="hidden sm:inline">Create post</span>
@@ -161,6 +180,7 @@ export default function Shell({ children }: { children: ReactNode }) {
 
 function ProfileMenu() {
   const [open, setOpen] = useState(false);
+  const { status } = useLive();
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex items-center gap-2 rounded-lg p-1 hover:bg-canvas" aria-expanded={open}>
@@ -173,16 +193,26 @@ function ProfileMenu() {
           <Link href={`${BASE}/plans`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-canvas">
             <Icon name="crown" size={17} /> Upgrade plan
           </Link>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Reset the demo workspace to its sample data?")) resetWorkspace();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-canvas"
-          >
-            <Icon name="refresh" size={17} /> Reset demo data
-          </button>
+          {status?.loggedIn ? (
+            <button
+              type="button"
+              onClick={() => logout().catch(reportError)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-canvas"
+            >
+              <Icon name="logout" size={17} /> Log out
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Reset the demo workspace to its sample data?")) resetWorkspace();
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-canvas"
+            >
+              <Icon name="refresh" size={17} /> Reset demo data
+            </button>
+          )}
           <Link href={BASE} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-canvas">
             <Icon name="logout" size={17} /> Back to website
           </Link>

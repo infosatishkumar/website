@@ -6,7 +6,7 @@ import Icon from "@/components/connector/Icon";
 import SocialIcon from "@/components/connector/SocialIcon";
 import { AccountChip, Modal, PageHeader, StatusBadge } from "@/components/connector/app/ui";
 import { APP } from "@/lib/connector/data";
-import { patchPost, removePost, type Post, useWorkspace, weekStart } from "@/lib/connector/store";
+import { patchPost, publishNow, removePost, reportError, type Post, useWorkspace, weekStart } from "@/lib/connector/store";
 
 type View = "list" | "day" | "week" | "month";
 
@@ -76,7 +76,7 @@ export default function CalendarPage() {
     const old = new Date(p.scheduledAt);
     const next = new Date(day);
     next.setHours(old.getHours(), old.getMinutes(), 0, 0);
-    patchPost(id, { scheduledAt: next.toISOString() });
+    patchPost(id, { scheduledAt: next.toISOString() }).catch(reportError);
   };
 
   const dropProps = (day: Date) => ({
@@ -242,7 +242,9 @@ function PostModal({ id, onClose }: { id: string; onClose: () => void }) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   });
   if (!post) return null;
-  const editable = post.status !== "published";
+  const editable = post.status !== "published" && post.status !== "publishing";
+  const errors = Object.values(post.result ?? {}).filter((r) => !r.ok);
+  const run = (fn: () => Promise<unknown>) => fn().then(onClose, reportError);
   return (
     <Modal title="Post details" onClose={onClose}>
       <div className="mb-4 flex flex-wrap gap-3">
@@ -251,6 +253,9 @@ function PostModal({ id, onClose }: { id: string; onClose: () => void }) {
           return a ? <AccountChip key={aid} account={a} small /> : null;
         })}
       </div>
+      {errors.length > 0 && (
+        <p className="mb-3 rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">{errors.map((r) => r.error).join("; ")}</p>
+      )}
       <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={!editable} rows={5} className="field" />
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <label className="flex-1 text-sm font-medium text-ink">
@@ -260,15 +265,18 @@ function PostModal({ id, onClose }: { id: string; onClose: () => void }) {
         <StatusBadge status={post.status} />
       </div>
       <div className="mt-6 flex flex-wrap justify-between gap-2">
-        <button type="button" className="btn btn-ghost text-danger" onClick={() => { if (confirm("Delete this post?")) { removePost(post.id); onClose(); } }}>
+        <button type="button" className="btn btn-ghost text-danger" onClick={() => { if (confirm("Delete this post?")) run(() => removePost(post.id)); }}>
           <Icon name="trash" size={18} /> Delete
         </button>
         <div className="flex flex-wrap gap-2">
           {post.status === "pending" && (
-            <button type="button" className="btn btn-outline" onClick={() => { patchPost(post.id, { status: "scheduled" }); onClose(); }}>Approve</button>
+            <button type="button" className="btn btn-outline" onClick={() => run(() => patchPost(post.id, { status: "scheduled" }))}>Approve</button>
           )}
           {editable && (
-            <button type="button" className="btn btn-primary" onClick={() => { patchPost(post.id, { text, scheduledAt: new Date(when).toISOString(), status: post.status === "draft" ? "scheduled" : post.status }); onClose(); }}>
+            <button type="button" className="btn btn-outline" onClick={() => run(() => publishNow(post.id))}>Publish now</button>
+          )}
+          {editable && (
+            <button type="button" className="btn btn-primary" onClick={() => run(() => patchPost(post.id, { text, scheduledAt: new Date(when).toISOString(), status: post.status === "draft" || post.status === "failed" ? "scheduled" : post.status }))}>
               {post.status === "draft" ? "Schedule" : "Save changes"}
             </button>
           )}

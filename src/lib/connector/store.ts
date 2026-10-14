@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { NetworkId } from "@/components/connector/SocialIcon";
+import { ApiError, type BackendStatus, get, post } from "./api";
 
 /*
  * Client-side workspace store for the dashboard demo.
@@ -7,7 +8,7 @@ import type { NetworkId } from "@/components/connector/SocialIcon";
  */
 
 export type Account = { id: string; network: NetworkId; name: string; handle: string; connectedAt: string };
-export type PostStatus = "scheduled" | "draft" | "published" | "pending" | "rejected";
+export type PostStatus = "scheduled" | "draft" | "published" | "pending" | "rejected" | "publishing" | "failed";
 export type Post = {
   id: string;
   text: string;
@@ -17,6 +18,8 @@ export type Post = {
   tagIds: string[];
   media: string[];
   author: string;
+  /** Per-account publish outcome from the backend (live mode). */
+  result?: Record<string, { ok: boolean; id?: string; error?: string }>;
 };
 export type Group = { id: string; name: string; accountIds: string[] };
 export type Tag = { id: string; name: string; color: string };
@@ -168,20 +171,124 @@ export function useWorkspace(): State {
   return useSyncExternalStore(subscribe, load, () => SERVER_SNAPSHOT);
 }
 
-/* ---- helpers ---- */
+/* ---- live mode (Hostinger backend) ---- */
 
-export function addPost(post: Omit<Post, "id">) {
-  const id = uid();
-  update((s) => ({ ...s, posts: [...s.posts, { ...post, id }] }));
-  return id;
+export type Live = { checked: boolean; status: BackendStatus | null };
+let live: Live = { checked: false, status: null };
+const liveListeners = new Set<() => void>();
+const SERVER_LIVE: Live = { checked: false, status: null };
+
+function setLive(next: Live) {
+  live = next;
+  liveListeners.forEach((l) => l());
 }
 
-export function patchPost(id: string, patch: Partial<Post>) {
+export function useLive(): Live {
+  return useSyncExternalStore(
+    (l) => {
+      liveListeners.add(l);
+      return () => liveListeners.delete(l);
+    },
+    () => live,
+    () => SERVER_LIVE,
+  );
+}
+
+export const isLive = () => !!live.status?.backend && live.status.loggedIn;
+
+/** Detects the backend once; in live mode accounts and posts come from the server. */
+export async function initLive(force = false) {
+  if (live.checked && !force) return;
+  try {
+    const status = await get<BackendStatus>("status");
+    setLive({ checked: true, status });
+    if (status.loggedIn) await refreshLive();
+  } catch {
+    setLive({ checked: true, status: null });
+  }
+}
+
+export async function refreshLive() {
+  const [accounts, posts] = await Promise.all([get<Account[]>("accounts"), get<Post[]>("posts")]);
+  // Replace demo data; keep local-only lists (tags, library, groups…).
+  state = { ...load(), accounts, posts };
+  persistLocalOnly();
+  listeners.forEach((l) => l());
+}
+
+function persistLocalOnly() {
+  if (!state) return;
+  // Server data is the source of truth in live mode; don't cache it locally.
+  persist({ ...state, accounts: [], posts: [] });
+}
+
+export function setAutopublishLocal(on: boolean) {
+  if (live.status) setLive({ ...live, status: { ...live.status, autopublish: on } });
+}
+
+export async function login(email: string, password: string) {
+  await post("login", { email, password });
+  await initLive(true);
+}
+
+export async function logout() {
+  await post("logout");
+  await initLive(true);
+}
+
+/* ---- helpers ---- */
+
+export async function addPost(p: Omit<Post, "id">): Promise<Post> {
+  if (isLive()) {
+    const created = await post<Post>("post_create", p);
+    await refreshLive();
+    return created;
+  }
+  const id = uid();
+  update((s) => ({ ...s, posts: [...s.posts, { ...p, id }] }));
+  return { ...p, id };
+}
+
+export async function patchPost(id: string, patch: Partial<Post>) {
+  if (isLive()) {
+    await post("post_update", { id, ...patch });
+    return refreshLive();
+  }
   update((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
 }
 
-export function removePost(id: string) {
+export async function publishNow(id: string) {
+  if (isLive()) {
+    await post("post_publish", { id });
+    return refreshLive();
+  }
+  update((s) => ({ ...s, posts: s.posts.map((p) => (p.id === id ? { ...p, status: "published" as const } : p)) }));
+}
+
+export async function removePost(id: string) {
+  if (isLive()) {
+    await post("post_delete", { id });
+    return refreshLive();
+  }
   update((s) => ({ ...s, posts: s.posts.filter((p) => p.id !== id) }));
+}
+
+export async function removeAccount(id: string) {
+  if (isLive()) {
+    await post("account_delete", { id });
+    await refreshLive();
+  }
+  update((s) => ({
+    ...s,
+    accounts: s.accounts.filter((a) => a.id !== id),
+    groups: s.groups.map((g) => ({ ...g, accountIds: g.accountIds.filter((x) => x !== id) })),
+  }));
+}
+
+/** Shows an API error to the user; returns false so callers can bail out. */
+export function reportError(e: unknown) {
+  alert(e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong");
+  return false;
 }
 
 export function addListItem(key: ListKey, item: Omit<SimpleItem, "id">) {

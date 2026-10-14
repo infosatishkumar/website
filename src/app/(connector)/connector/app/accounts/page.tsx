@@ -5,17 +5,32 @@ import Icon from "@/components/connector/Icon";
 import SocialIcon, { networkMeta } from "@/components/connector/SocialIcon";
 import { AccountChip, Card, Empty, PageHeader } from "@/components/connector/app/ui";
 import { APP } from "@/lib/connector/data";
-import { update, useWorkspace } from "@/lib/connector/store";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { removeAccount, reportError, useWorkspace } from "@/lib/connector/store";
+
+function ConnectNotice() {
+  const params = useSearchParams();
+  const connected = params.get("connected");
+  const error = params.get("error");
+  if (connected) {
+    return (
+      <p className="mb-5 flex items-center gap-2 rounded-xl bg-success-tint px-4 py-3 text-sm font-medium text-ink">
+        <Icon name="checkCircle" className="text-success" /> {connected} account{connected === "1" ? "" : "s"} connected from Meta.
+      </p>
+    );
+  }
+  if (error) {
+    return <p className="mb-5 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">{error}</p>;
+  }
+  return null;
+}
 
 export default function AccountsPage() {
   const ws = useWorkspace();
   const disconnect = (id: string) => {
     if (!confirm("Disconnect this account? Its scheduled posts stay in your calendar.")) return;
-    update((s) => ({
-      ...s,
-      accounts: s.accounts.filter((a) => a.id !== id),
-      groups: s.groups.map((g) => ({ ...g, accountIds: g.accountIds.filter((x) => x !== id) })),
-    }));
+    removeAccount(id).catch(reportError);
   };
 
   return (
@@ -25,6 +40,9 @@ export default function AccountsPage() {
         sub={`${ws.accounts.length} connected profile${ws.accounts.length === 1 ? "" : "s"}`}
         actions={<Link href={`${APP}/accounts/create`} className="btn btn-primary"><Icon name="plus" size={18} /> Connect account</Link>}
       />
+      <Suspense>
+        <ConnectNotice />
+      </Suspense>
       <Card>
         {ws.accounts.length === 0 ? (
           <Empty icon="plug" title="No accounts yet" sub="Connect your first social profile to start scheduling." action={<Link href={`${APP}/accounts/create`} className="btn btn-primary">Connect account</Link>} />

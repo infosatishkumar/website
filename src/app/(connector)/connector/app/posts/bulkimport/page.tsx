@@ -6,7 +6,7 @@ import Icon from "@/components/connector/Icon";
 import AccountPicker from "@/components/connector/app/AccountPicker";
 import { Card, PageHeader } from "@/components/connector/app/ui";
 import { APP } from "@/lib/connector/data";
-import { uid, update, type Post } from "@/lib/connector/store";
+import { addPost, isLive, reportError, uid, update, type Post } from "@/lib/connector/store";
 
 const SAMPLE = `date,time,caption,image_url
 2026-10-20,09:00,"Monday motivation: start small, stay consistent 💪",
@@ -69,7 +69,7 @@ export default function BulkImportPage() {
 
   const good = rows.filter((r) => r.errors.length === 0);
 
-  const importRows = () => {
+  const importRows = async () => {
     const posts: Post[] = good.map((r) => ({
       id: uid(),
       text: r.url ? `${r.caption} ${r.url}` : r.caption,
@@ -80,7 +80,19 @@ export default function BulkImportPage() {
       media: [],
       author: "Bulk import",
     }));
-    update((s) => ({ ...s, posts: [...s.posts, ...posts] }));
+    if (isLive()) {
+      try {
+        for (const { id: _id, ...p } of posts) {
+          void _id;
+          await addPost(p);
+        }
+      } catch (e) {
+        reportError(e);
+        return;
+      }
+    } else {
+      update((s) => ({ ...s, posts: [...s.posts, ...posts] }));
+    }
     setDone(posts.length);
     setCsv("");
   };

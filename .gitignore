@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Hostinger PHP backend
+/hostinger/api/vendor/
+/hostinger/smc-config.php
+/hostinger/dist/

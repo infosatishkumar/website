@@ -72,6 +72,8 @@ export function StatusBadge({ status }: { status: string }) {
     draft: "bg-canvas text-muted",
     pending: "bg-[#fff3d1] text-[#9a6b00]",
     rejected: "bg-danger-tint text-danger",
+    failed: "bg-danger-tint text-danger",
+    publishing: "bg-primary-tint text-primary",
   };
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold capitalize ${map[status] ?? map.draft}`}>{status}</span>;
 }
