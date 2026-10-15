@@ -12,6 +12,7 @@ const PLATFORM_KEYS = [
     'tiktok_client_key', 'tiktok_client_secret',
     'anthropic_api_key',
     'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'mail_from', 'mail_from_name', 'demo_notify_email',
+    'upi_id', 'upi_name',
 ];
 const PLATFORM_SECRETS = [
     'meta_app_secret', 'anthropic_api_key', 'smtp_pass', 'instagram_app_secret', 'threads_app_secret',
@@ -42,6 +43,8 @@ function config(): array
                 'demo_timezone' => 'Asia/Kolkata',
                 'demo_hours' => ['10:00', '18:00'],
                 'demo_days' => [1, 2, 3, 4, 5, 6],
+                'upi_id' => 'infosatish.in2@ybl',
+                'upi_name' => 'SATISH KUMAR PRASAD',
             ];
             // Keys the owner saved from Platform settings on the website win over the file.
             try {
@@ -135,6 +138,22 @@ function migrate(PDO $pdo): void
         updated_at TEXT NOT NULL
     )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan TEXT NOT NULL,
+        cycle TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        utr TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        decided_at TEXT
+    )');
+    foreach (['plan' => "TEXT NOT NULL DEFAULT ''", 'plan_until' => "TEXT NOT NULL DEFAULT ''"] as $col => $def) {
+        if (!has_column($pdo, 'users', $col)) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN $col $def");
+        }
+    }
     $pdo->exec('CREATE TABLE IF NOT EXISTS auth_tokens (selector TEXT PRIMARY KEY, hash TEXT NOT NULL, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS rate_limits (ip TEXT NOT NULL, action TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS pending_accounts (
@@ -342,7 +361,7 @@ function uid(): int
 
 function user_public(array $u): array
 {
-    return ['id' => (string) $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'isAdmin' => is_admin($u)];
+    return ['id' => (string) $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'isAdmin' => is_admin($u), 'plan' => user_plan($u)];
 }
 
 /** The site owner: admin_email in smc-config.php (comma-separated allowed), else the first user. */
@@ -367,7 +386,7 @@ function ai_credits_left(): int
 {
     $s = db()->prepare('SELECT count FROM ai_usage WHERE user_id = ? AND day = ?');
     $s->execute([uid(), gmdate('Y-m-d')]);
-    return max(0, (int) config()['agent_daily_limit'] - (int) $s->fetchColumn());
+    return max(0, user_plan(current_user())['credits'] - (int) $s->fetchColumn());
 }
 
 function use_ai_credit(): void

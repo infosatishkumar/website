@@ -31,7 +31,7 @@ function auth_signup(array $b): array
     if (empty(config()['signup_open'])) {
         fail('Sign-ups are closed right now.', 403);
     }
-    rate_limit('signup', 5, 3600);
+    rate_limit('signup', 10, 3600);
     $name = trim((string) ($b['name'] ?? ''));
     $email = strtolower(trim((string) ($b['email'] ?? '')));
     $password = (string) ($b['password'] ?? '');
@@ -112,8 +112,11 @@ function auth_login(array $b): array
         }
     }
 
-    if (!$u || !password_verify($password, $u['password_hash'])) {
-        fail('Wrong email or password.', 401);
+    if (!$u) {
+        fail('No account found for this email. Check the spelling, or create an account.', 401);
+    }
+    if (!password_verify($password, $u['password_hash'])) {
+        fail('Wrong password. Try again, or use “Forgot password?” to set a new one.', 401);
     }
     if (!$u['verified_at']) {
         json_out(['error' => 'Please verify your email first. Check your inbox (and spam folder).', 'needsVerification' => true], 403);

@@ -7,7 +7,8 @@ import { APP, type Plan } from "@/lib/connector/data";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-export default function PricingTable({ plans }: { plans: Plan[] }) {
+/** `buy` links each plan to UPI checkout; off for products without online checkout (listings). */
+export default function PricingTable({ plans, buy = true }: { plans: Plan[]; buy?: boolean }) {
   const [annual, setAnnual] = useState(true);
   return (
     <div>
@@ -59,8 +60,11 @@ export default function PricingTable({ plans }: { plans: Plan[] }) {
                 <span className="mb-1 text-muted">/mo</span>
               </p>
               <p className="mt-1 text-xs text-muted">{annual ? `Billed ${inr(price * 12)} yearly` : "Billed monthly"}</p>
-              <Link href={`${APP}/launchpad`} className={`btn mt-6 ${p.popular ? "btn-primary" : "btn-outline"}`}>
-                Start free trial
+              <Link
+                href={buy ? `${APP}/billing/?plan=${encodeURIComponent(p.name)}&cycle=${annual ? "annual" : "monthly"}` : `${APP}/launchpad`}
+                className={`btn mt-6 ${p.popular ? "btn-primary" : "btn-outline"}`}
+              >
+                {buy ? "Buy now · pay by UPI" : "Start free trial"}
               </Link>
               <ul className="mt-6 space-y-2.5 border-t border-line pt-6 text-sm">
                 {p.limits.map((l) => (

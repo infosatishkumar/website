@@ -235,6 +235,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   const { status } = useLive();
   const theme = useTheme();
   const live = !!status?.loggedIn;
+  const plan = status?.user?.plan?.name;
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-line bg-rail px-3 sm:px-5">
       <button type="button" className="rounded-lg p-2 text-ink lg:hidden" onClick={onMenu} aria-label="Open menu">
@@ -248,10 +249,10 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </span>
       </Link>
       <Link
-        href={`${BASE}/plans`}
+        href={`${APP}/billing`}
         className="ml-2 hidden items-center gap-1.5 rounded-full bg-primary-tint px-3 py-1.5 text-xs font-bold text-accent md:inline-flex"
       >
-        <Icon name="crown" size={14} /> Free plan · Upgrade
+        <Icon name="crown" size={14} /> {plan && plan !== "Free" ? `${plan} plan` : "Free plan · Upgrade"}
       </Link>
       <span
         className={`hidden rounded-full px-2.5 py-1 text-xs font-bold md:inline ${live ? "bg-success-tint text-success" : "bg-warn-tint text-warn-ink"}`}
@@ -330,8 +331,13 @@ function ProfileMenu() {
               <Icon name="gear" size={17} /> Platform settings
             </Link>
           )}
-          <Link href={`${BASE}/plans`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
-            <Icon name="crown" size={17} /> Upgrade plan
+          {user?.isAdmin && (
+            <Link href={`${APP}/settings/payments`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
+              <Icon name="dollar" size={17} /> Payments
+            </Link>
+          )}
+          <Link href={`${APP}/billing`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
+            <Icon name="crown" size={17} /> Plans &amp; billing
           </Link>
           <Link href={BASE} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
             <Icon name="globe" size={17} /> Website
@@ -383,6 +389,8 @@ function WelcomeNotice() {
 }
 
 function UpgradeBanner() {
+  const { status } = useLive();
+  const paid = !!status?.user?.plan && status.user.plan.name !== "Free";
   const [hidden, setHidden] = useState(() => {
     try {
       return typeof window !== "undefined" && localStorage.getItem(BANNER_KEY) === "1";
@@ -390,13 +398,13 @@ function UpgradeBanner() {
       return false;
     }
   });
-  if (hidden) return null;
+  if (hidden || paid) return null;
   return (
     <div className="mx-4 mt-4 flex items-center gap-3 rounded-xl border border-primary-tint bg-primary-soft px-4 py-3 text-sm text-ink-2 sm:mx-6 lg:mx-8">
       <Icon name="sparkles" size={18} className="shrink-0 text-accent" />
       <span className="flex-1">
         Bring your next big idea to life. Get more AI credits and accounts with a paid plan.{" "}
-        <Link href={`${BASE}/plans`} className="font-bold text-accent underline">Upgrade</Link>
+        <Link href={`${APP}/billing`} className="font-bold text-accent underline">Upgrade</Link>
       </span>
       <button
         type="button"

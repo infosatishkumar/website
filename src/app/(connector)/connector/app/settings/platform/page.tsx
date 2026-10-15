@@ -200,6 +200,14 @@ export default function PlatformSettings() {
           </Label>
         </Section>
 
+        <Section title="UPI payments" icon="dollar" ready={!!form.upi_id} keys={["upi_id", "upi_name"]} form={form} onSaved={load}>
+          <p className="mb-4 text-sm text-ink-2">Customers scan a QR with the plan amount filled in. Approve their payments in Profile menu → Payments.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Label text="UPI ID">{input("upi_id", false, "yourname@ybl")}</Label>
+            <Label text="Name shown in UPI apps">{input("upi_name", false, "SATISH KUMAR PRASAD")}</Label>
+          </div>
+        </Section>
+
         <Section
           title="Email (verification & password reset)"
           icon="mail"

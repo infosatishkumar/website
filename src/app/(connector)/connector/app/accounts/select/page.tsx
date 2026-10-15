@@ -43,6 +43,8 @@ export default function SelectAccounts() {
     get<{ kind: string; items: Pending[] }>("meta_pending").then((r) => {
       setItems(r.items);
       setKind(r.kind);
+      // Everything is ticked already — most people just press Connect.
+      setPicked(r.items.filter((i) => !i.connected).map((i) => i.key));
     }, reportError);
   }, [status?.loggedIn]);
 

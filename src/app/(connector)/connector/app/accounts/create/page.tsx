@@ -204,7 +204,16 @@ function ConnectInner() {
   const { status } = useLive();
   const live = !!status?.loggedIn;
   const error = useSearchParams().get("error");
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenRaw] = useState<string | null>(null);
+  // One-step connect: networks with a single way to log in go straight to that login.
+  const setOpen = (choice: string | null) => {
+    const spec = choice ? vias[choice] : undefined;
+    if (live && spec && spec.options.length === 1 && status?.configured.connect?.[spec.options[0].kind]) {
+      window.location.assign(connectUrl(spec.options[0].kind));
+      return;
+    }
+    setOpenRaw(choice);
+  };
 
   return (
     <>

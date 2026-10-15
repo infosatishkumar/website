@@ -279,6 +279,13 @@ function oauth_callback(array $q): string
         error_log("SMC connect error ($kind): " . $e->getMessage());
         return $back . '?error=' . rawurlencode($e->getMessage());
     }
+    // One account? Connect it straight away — no picker needed.
+    $pending = meta_pending()['items'];
+    $fresh = array_values(array_filter($pending, fn ($i) => !$i['connected']));
+    if (count($pending) === 1 && count($fresh) === 1) {
+        meta_connect_selected([$fresh[0]['key']]);
+        return base_url() . '/connector/app/accounts/?connected=1';
+    }
     return base_url() . '/connector/app/accounts/select/';
 }
 

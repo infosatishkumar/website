@@ -11,7 +11,7 @@ export default function ListingPlansPage() {
       <PageIntro eyebrow="Listings pricing" title="Be found everywhere customers search" sub="Sync your business details to 40+ directories and grow your star rating." />
       <section className="bg-primary-soft pb-24">
         <Container>
-          <PricingTable plans={listingPlans} />
+          <PricingTable plans={listingPlans} buy={false} />
         </Container>
       </section>
       <div className="pt-24" />

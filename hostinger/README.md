@@ -83,6 +83,16 @@ Sab apps me **ek hi Callback URL**: `https://aapkadomain.com/api/oauth.php`
 - Har network public users ke liye kholne se pehle apna review/approval maangta hai
   (Meta App Review, LinkedIn Community Management, TikTok audit, Google verification).
 
+## 4b. Payments (UPI)
+
+- Pricing page par **Buy now · pay by UPI** → user ko QR milta hai jisme plan ka amount pehle se bhara hota hai
+  (mobile par "Pay in UPI app" button seedha PhonePe/GPay kholta hai).
+- User payment ke baad **UTR / UPI Ref No.** daalta hai. Aapko email aata hai.
+- Profile menu → **Payments**: apne UPI app ki History me wahi UTR milao → **Approve** → plan turant chalu
+  (zyada AI credits). Reject karne par user ko email jata hai.
+- UPI ID aur naam: Settings → Platform settings → **UPI payments** (default `infosatish.in2@ybl`).
+- Bina approve kiye apne aap confirm karne ke liye payment gateway (Razorpay / PhonePe PG) lagana padega.
+
 ## 5. Cron (scheduled posts ke liye)
 
 hPanel → **Advanced → Cron Jobs** → har 5 minute:

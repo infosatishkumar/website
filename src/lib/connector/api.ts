@@ -33,7 +33,8 @@ async function call<T>(action: string, init?: RequestInit): Promise<T> {
 export const get = <T>(action: string) => call<T>(action);
 export const post = <T>(action: string, body: unknown = {}) => call<T>(action, { method: "POST", body: JSON.stringify(body) });
 
-export type User = { id: string; name: string; email: string; isAdmin?: boolean };
+export type UserPlan = { name: string; until: string | null; credits: number };
+export type User = { id: string; name: string; email: string; isAdmin?: boolean; plan?: UserPlan };
 
 export type BackendStatus = {
   backend: boolean;

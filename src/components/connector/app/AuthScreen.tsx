@@ -174,6 +174,9 @@ export default function AuthScreen() {
                       type="email"
                       name="email"
                       id="smc-email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       aria-label="Email"
                       autoComplete="username"
                       value={email}

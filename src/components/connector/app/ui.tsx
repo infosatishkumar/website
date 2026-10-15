@@ -105,6 +105,7 @@ export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     scheduled: "bg-primary-tint text-primary",
     published: "bg-success-tint text-success",
+    approved: "bg-success-tint text-success",
     draft: "bg-canvas text-muted",
     pending: "bg-warn-tint text-warn-ink",
     rejected: "bg-danger-tint text-danger",
@@ -162,7 +163,15 @@ export function PasswordInput({ className = "", ...props }: Omit<InputHTMLAttrib
   const [show, setShow] = useState(false);
   return (
     <span className="relative block">
-      <input {...props} type={show ? "text" : "password"} className={`field pr-11 ${className}`} />
+      {/* No auto-capitalise / autocorrect: phones otherwise change the first letter when the password is shown. */}
+      <input
+        {...props}
+        type={show ? "text" : "password"}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className={`field pr-11 ${className}`}
+      />
       <button
         type="button"
         onClick={() => setShow((v) => !v)}

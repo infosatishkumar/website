@@ -10,6 +10,7 @@ require __DIR__ . '/lib/images.php';
 require __DIR__ . '/lib/agent.php';
 require __DIR__ . '/lib/demo.php';
 require __DIR__ . '/lib/platform.php';
+require __DIR__ . '/lib/billing.php';
 
 $action = (string) ($_GET['action'] ?? '');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -25,7 +26,7 @@ if ($method === 'POST' && ($_SERVER['HTTP_X_SMC'] ?? '') !== '1') {
     fail('Bad request', 403);
 }
 
-$public = ['status', 'signup', 'resend', 'verify', 'login', 'forgot', 'reset', 'demo_slots', 'demo_book'];
+$public = ['status', 'signup', 'resend', 'verify', 'login', 'forgot', 'reset', 'demo_slots', 'demo_book', 'upi_info'];
 if (!in_array($action, $public, true) && !current_user()) {
     if ($action === 'meta_callback' || $action === 'oauth_callback' || $action === 'oauth_start') {
         header('Location: ' . app_url('auth=expired'));
@@ -55,7 +56,7 @@ try {
                 ],
                 'autopublish' => $u ? user_setting('autopublish', '0') === '1' : false,
                 'credits' => $u ? ai_credits_left() : 0,
-                'creditsPerDay' => (int) $cfg['agent_daily_limit'],
+                'creditsPerDay' => user_plan($u)['credits'],
             ]);
 
         case 'signup':
@@ -232,6 +233,22 @@ try {
             $b = body();
             $bg = (string) ($b['background'] ?? '');
             json_out(ai_image((string) ($b['prompt'] ?? ''), (string) ($b['size'] ?? ''), is_own_upload($bg) ? $bg : ''));
+
+        /* ---------- billing (UPI) ---------- */
+        case 'upi_info':
+            json_out(upi_info());
+        case 'payments':
+            json_out(['payments' => my_payments(), 'plan' => user_plan(current_user())]);
+        case 'payment_create':
+            json_out(payment_create(body()));
+        case 'payments_admin':
+            json_out(['payments' => all_payments()]);
+        case 'payment_decide':
+            if ($method !== 'POST') {
+                fail('POST required', 405);
+            }
+            $b = body();
+            json_out(payment_decide((int) ($b['id'] ?? 0), !empty($b['approve'])));
 
         case 'agent_settings':
             set_user_setting('autopublish', !empty(body()['autopublish']) ? '1' : '0');
