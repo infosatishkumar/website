@@ -56,10 +56,15 @@ function provider_ready(string $provider): bool
 function linkedin_keys(bool $page): array
 {
     $cfg = config();
-    if ($page && trim((string) ($cfg['linkedin_page_client_id'] ?? '')) !== '' && trim((string) ($cfg['linkedin_page_client_secret'] ?? '')) !== '') {
-        return [(string) $cfg['linkedin_page_client_id'], (string) $cfg['linkedin_page_client_secret']];
+    $main = [trim((string) ($cfg['linkedin_client_id'] ?? '')), trim((string) ($cfg['linkedin_client_secret'] ?? ''))];
+    $pages = [trim((string) ($cfg['linkedin_page_client_id'] ?? '')), trim((string) ($cfg['linkedin_page_client_secret'] ?? ''))];
+    $hasMain = $main[0] !== '' && $main[1] !== '';
+    $hasPages = $pages[0] !== '' && $pages[1] !== '';
+    // Whichever pair is filled in works for both buttons; the Pages pair wins for Pages.
+    if ($page) {
+        return $hasPages ? $pages : $main;
     }
-    return [(string) ($cfg['linkedin_client_id'] ?? ''), (string) ($cfg['linkedin_client_secret'] ?? '')];
+    return $hasMain ? $main : $pages;
 }
 
 /** Which connect buttons work right now (Bluesky needs no developer app). */
@@ -70,6 +75,7 @@ function connect_ready(): array
         $out[$kind] = provider_ready($k['provider']);
     }
     $out['linkedin_page'] = $out['linkedin_page'] || provider_ready('linkedin');
+    $out['linkedin_profile'] = $out['linkedin_profile'] || provider_ready('linkedin_page');
     return $out;
 }
 
