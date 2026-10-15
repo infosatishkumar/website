@@ -8,7 +8,7 @@ import SocialIcon, { type NetworkId } from "@/components/connector/SocialIcon";
 import { Card, PageHeader, PasswordInput } from "@/components/connector/app/ui";
 import { get, post } from "@/lib/connector/api";
 import { APP } from "@/lib/connector/data";
-import { initLive, reportError, useLive } from "@/lib/connector/store";
+import { initLive, useLive } from "@/lib/connector/store";
 
 type Values = Record<string, string>;
 type Settings = { values: Values; secrets: string[]; redirectUri: string; siteUrl: string; privacyUrl: string; termsUrl: string };
@@ -56,18 +56,29 @@ const providers: Provider[] = [
   },
   {
     id: "linkedin",
-    title: "LinkedIn",
+    title: "LinkedIn profiles",
     icons: ["linkedin"],
     readyKind: "linkedin_profile",
     portal: "https://www.linkedin.com/developers/apps",
-    hint: "Profiles: add “Sign In with LinkedIn using OpenID Connect” + “Share on LinkedIn”. Company Pages need the Community Management API, which LinkedIn only allows on a separate app — put that app's keys in the Pages boxes.",
+    hint: "In your LinkedIn app add the products “Sign In with LinkedIn using OpenID Connect” and “Share on LinkedIn”.",
     fields: [
-      { key: "linkedin_client_id", label: "Client ID (profiles)" },
-      { key: "linkedin_client_secret", label: "Client Secret (profiles)" },
-      { key: "linkedin_page_client_id", label: "Client ID (Pages app)", optional: true },
-      { key: "linkedin_page_client_secret", label: "Client Secret (Pages app)", optional: true },
+      { key: "linkedin_client_id", label: "Client ID" },
+      { key: "linkedin_client_secret", label: "Client Secret" },
     ],
   },
+  {
+    id: "linkedin_page",
+    title: "LinkedIn company pages",
+    icons: ["linkedin"],
+    readyKind: "linkedin_page",
+    portal: "https://www.linkedin.com/developers/apps",
+    hint: "Company Pages need the “Community Management API” product, which LinkedIn only allows on its own app — create a separate app for it and paste that app's keys here.",
+    fields: [
+      { key: "linkedin_page_client_id", label: "Client ID" },
+      { key: "linkedin_page_client_secret", label: "Client Secret" },
+    ],
+  },
+
   {
     id: "x",
     title: "X (Twitter)",
@@ -125,7 +136,7 @@ const providersFor: Record<string, string[]> = {
   instagram_login: ["instagram"],
   threads: ["threads"],
   linkedin_profile: ["linkedin"],
-  linkedin_page: ["linkedin"],
+  linkedin_page: ["linkedin_page"],
   x: ["x"],
   youtube: ["google"],
   google_business: ["google"],
@@ -218,7 +229,7 @@ function PlatformSettings() {
           </div>
         </section>
 
-        {only ? (
+        {only && (
           <div className="flex flex-wrap gap-3">
             <Link href={`${APP}/accounts/create`} className="btn btn-primary">
               Back to Connect account
@@ -227,26 +238,6 @@ function PlatformSettings() {
               Show all settings
             </Link>
           </div>
-        ) : (
-          <Section
-            title="Email (verification & password reset)"
-            icon="mail"
-            ready={status.configured.email}
-            keys={["smtp_host", "smtp_port", "smtp_user", "smtp_pass", "mail_from", "mail_from_name", "demo_notify_email"]}
-            form={form}
-            onSaved={load}
-            extra={<TestEmail />}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Label text="Mailbox (SMTP user)">{input("smtp_user", false, "contact@satishkumar.net")}</Label>
-              <Label text="Mailbox password">{input("smtp_pass", true)}</Label>
-              <Label text="SMTP server">{input("smtp_host", false, "smtp.hostinger.com")}</Label>
-              <Label text="Port" hint="465 (SSL) or 587 (TLS)">{input("smtp_port", false, "465")}</Label>
-              <Label text="From address">{input("mail_from", false, "Same as mailbox")}</Label>
-              <Label text="From name">{input("mail_from_name", false, "Social Media Connector")}</Label>
-              <Label text="Demo booking alerts go to">{input("demo_notify_email", false, "contact@satishkumar.net")}</Label>
-            </div>
-          </Section>
         )}
       </div>
     </div>
@@ -326,7 +317,7 @@ function useSave(keys: string[], form: Values, onSaved: () => void) {
   return { busy, msg, run };
 }
 
-function SaveBar({ save, extra }: { save: ReturnType<typeof useSave>; extra?: ReactNode }) {
+function SaveBar({ save }: { save: ReturnType<typeof useSave> }) {
   return (
     <>
       {save.msg && (
@@ -336,80 +327,16 @@ function SaveBar({ save, extra }: { save: ReturnType<typeof useSave>; extra?: Re
         <button type="button" disabled={save.busy} onClick={save.run} className="btn btn-primary disabled:opacity-50">
           {save.busy ? "Checking…" : "Save"}
         </button>
-        {extra}
       </div>
     </>
   );
 }
 
-function Section({
-  title,
-  icon,
-  ready,
-  keys,
-  form,
-  onSaved,
-  extra,
-  children,
-}: {
-  title: string;
-  icon: string;
-  ready: boolean;
-  keys: string[];
-  form: Values;
-  onSaved: () => void;
-  extra?: ReactNode;
-  children: ReactNode;
-}) {
-  const save = useSave(keys, form, onSaved);
-  return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-tint text-accent">
-          <Icon name={icon} size={18} />
-        </span>
-        <h2 className="flex-1 text-lg font-bold text-ink">{title}</h2>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${ready ? "bg-success-tint text-success" : "bg-warn-tint text-warn-ink"}`}>
-          {ready ? "Ready" : "Not set up"}
-        </span>
-      </div>
-      {children}
-      <SaveBar save={save} extra={extra} />
-    </section>
-  );
-}
-
-function TestEmail() {
-  const [state, setState] = useState("");
-  return (
-    <>
-      <button
-        type="button"
-        className="btn btn-ghost border border-line"
-        onClick={() => {
-          setState("Sending…");
-          post<{ to: string }>("platform_test_email").then(
-            (r) => setState(`Test email sent to ${r.to}`),
-            (e: Error) => {
-              setState("");
-              reportError(e);
-            },
-          );
-        }}
-      >
-        Send test email
-      </button>
-      {state && <span className="text-sm text-ink-2">{state}</span>}
-    </>
-  );
-}
-
-function Label({ text, hint, children }: { text: string; hint?: ReactNode; children: ReactNode }) {
+function Label({ text, children }: { text: string; children: ReactNode }) {
   return (
     <div className="block text-sm font-medium text-ink">
       <span className="mb-1.5 block">{text}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs font-normal text-muted">{hint}</span>}
     </div>
   );
 }
