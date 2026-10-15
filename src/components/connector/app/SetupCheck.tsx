@@ -10,7 +10,7 @@ export function SetupProblems({ compact = false }: { compact?: boolean }) {
   const { health } = useLive();
   if (!health) {
     return (
-      <div className="rounded-xl bg-[#fff3d1] px-4 py-3 text-sm text-ink">
+      <div className="rounded-xl bg-warn-tint px-4 py-3 text-sm text-ink">
         <p className="font-bold">Backend not found on this site (no /api folder).</p>
         <p className="mt-1">
           This copy runs in demo mode. Upload the latest zip — it contains the <b>api</b> and <b>uploads</b> folders — and
@@ -40,7 +40,7 @@ export function SetupProblems({ compact = false }: { compact?: boolean }) {
 export default function SetupScreen() {
   return (
     <div className="hero-glow flex min-h-screen items-center justify-center p-4">
-      <div className="menu-in w-full max-w-xl rounded-2xl bg-white p-8 shadow-2xl">
+      <div className="menu-in w-full max-w-xl rounded-2xl bg-surface p-8 shadow-2xl">
         <Logo href="/connector" />
         <h1 className="mt-6 text-2xl font-bold text-ink">Server check</h1>
         <p className="mt-1 text-sm text-ink-2">Fix these on Hostinger, then reload this page.</p>

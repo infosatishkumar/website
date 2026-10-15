@@ -206,7 +206,7 @@ function PostCard({ post, compact, onOpen }: { post: Post; compact: boolean; onO
       draggable={post.status !== "published"}
       onDragStart={(e) => e.dataTransfer.setData("text/plain", post.id)}
       onClick={onOpen}
-      className="group w-full cursor-grab rounded-lg border border-line bg-white p-2 text-left shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+      className="group w-full cursor-grab rounded-lg border border-line bg-surface p-2 text-left shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
       style={tag ? { borderLeft: `3px solid ${tag.color}` } : undefined}
     >
       <span className="flex items-center gap-1.5">

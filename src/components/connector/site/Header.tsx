@@ -7,6 +7,7 @@ import Logo from "../Logo";
 import Icon, { IconTile } from "../Icon";
 import SocialIcon, { networkMeta } from "../SocialIcon";
 import VideoTrigger, { VideoThumb } from "./VideoModal";
+import DemoButton from "./DemoBooking";
 import {
   APP,
   BASE,
@@ -129,9 +130,7 @@ export default function Header() {
             <Link href={`${APP}/launchpad`} className="btn btn-ghost">
               Log in
             </Link>
-            <Link href={`${BASE}/help#demo`} className="btn btn-outline">
-              Request demo
-            </Link>
+            <DemoButton className="btn btn-outline">Request demo</DemoButton>
             <Link href={`${APP}/launchpad`} className="btn btn-primary">
               Start free trial
             </Link>
@@ -413,7 +412,7 @@ function MobileMenu() {
       </Link>
       <div className="mt-5 grid gap-3">
         <Link href={`${APP}/launchpad`} className="btn btn-primary">Start free trial</Link>
-        <Link href={`${BASE}/help#demo`} className="btn btn-outline">Request demo</Link>
+        <DemoButton className="btn btn-outline">Request demo</DemoButton>
         <Link href={`${APP}/launchpad`} className="btn btn-ghost">Log in</Link>
       </div>
     </div>

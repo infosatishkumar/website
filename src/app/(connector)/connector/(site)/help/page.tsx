@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Icon, { IconTile } from "@/components/connector/Icon";
-import DemoForm from "@/components/connector/site/DemoForm";
+import DemoButton from "@/components/connector/site/DemoBooking";
 import { Container, PageIntro, SectionHeading } from "@/components/connector/site/Sections";
 import { BASE, helpCategories } from "@/lib/connector/data";
 
@@ -48,7 +48,12 @@ export default function HelpPage() {
               ))}
             </ul>
           </div>
-          <DemoForm />
+          <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-line">
+            <Icon name="calendarCheck" size={40} className="mx-auto text-primary" />
+            <p className="mt-4 text-xl font-bold text-ink">Pick a time that suits you</p>
+            <p className="mt-2 text-ink-2">30-minute video call. You’ll get a confirmation email right away.</p>
+            <DemoButton className="btn btn-primary mt-6">Book a demo</DemoButton>
+          </div>
         </Container>
       </section>
     </>

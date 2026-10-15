@@ -45,8 +45,8 @@ if (!$configFile) {
         } elseif ($host !== '' && parse_url($base, PHP_URL_HOST) !== $host) {
             $problems[] = 'base_url is ' . $base . ' but this site is ' . $host . '. Make them the same.';
         }
-        if (empty($cfg['admin_email']) || empty($cfg['admin_password']) || $cfg['admin_password'] === 'change-this-long-password') {
-            $problems[] = 'Set admin_email and a new admin_password in smc-config.php.';
+        if (empty($cfg['smtp_user']) || empty($cfg['smtp_pass'])) {
+            $problems[] = 'smtp_user / smtp_pass are empty — sign-up verification and password reset emails cannot be sent. Use your Hostinger mailbox (e.g. contact@satishkumar.net) and its password.';
         }
         if (empty($cfg['anthropic_api_key'])) {
             $problems[] = 'anthropic_api_key is empty — the AI Agent needs it (console.anthropic.com → API Keys).';

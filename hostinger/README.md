@@ -27,12 +27,27 @@ bash hostinger/build.sh   # → hostinger/dist/social-media-connector-hostinger.
    (File Manager me `public_html` ke parent folder me).
 3. Isme bharo:
    - `base_url` → `https://aapkadomain.com`
-   - `admin_email`, `admin_password` → dashboard login
+   - `admin_email`, `admin_password` → purana owner login (pehli baar login karte hi ye
+     user #1 ban jata hai; naye log website par khud **Sign up** karte hain)
+   - `smtp_pass` → `contact@satishkumar.net` mailbox ka password (step 3a)
    - `anthropic_api_key` → console.anthropic.com → API Keys se **nayi** key (`sk-ant-api03-…`)
    - `meta_app_id`, `meta_app_secret` → step 4 se
    - `cron_secret` → koi bhi lamba random text
 
 Key kabhi bhi `public_html` ke andar, GitHub par, ya chat me mat daalna.
+
+## 3a. Email verification (contact@satishkumar.net)
+
+Sign up par user ko Gmail/inbox me **"Verify Email"** link jata hai; password reset aur
+demo booking ke emails bhi isi se jate hain.
+
+1. hPanel → **Emails** → domain `satishkumar.net` → mailbox `contact@satishkumar.net`
+   bana lo (ya pehle se hai to uska password reset karke yaad rakho).
+2. Config me: `smtp_host` = `smtp.hostinger.com`, `smtp_port` = `465`,
+   `smtp_user` = `mail_from` = `contact@satishkumar.net`, `smtp_pass` = mailbox password.
+3. Spam me na jaye isliye hPanel → Emails → **DNS / Email deliverability** me SPF, DKIM,
+   DMARC "Connected" dikhne chahiye.
+4. Test: `https://aapkadomain.com/api/health.php` kholo — "SMTP" wali line green honi chahiye.
 
 ## 4. Meta (Facebook + Instagram) app
 
@@ -58,14 +73,21 @@ hPanel → **Advanced → Cron Jobs** → har 5 minute:
 
 ## 6. Chalu karo
 
-1. `https://aapkadomain.com/connector/app/` kholo → config wale email/password se login.
-2. **Connect account → Connect with Facebook** → Pages chuno.
-3. **AI Agent** me likho: "Diwali offer ka post bana do" (Instagram ke liye image attach karo).
+1. `https://aapkadomain.com/connector/app/` kholo → **Create an account** → email me
+   aaya **Verify Email** dabao → seedha dashboard khul jayega. (Ya purane admin
+   email/password se login.)
+2. Top-right ☀/🌙 button se **Light / Dark mode** badlo.
+3. **Accounts → Connect account → Facebook "Connect Page"** ya **Instagram "Connect
+   Business or Creator"** → Meta Business Suite → Proceed → Facebook login →
+   **Select accounts** screen par Pages/Instagram chuno → Connect account.
+4. **Agent** me likho: "Diwali offer ka post bana do" (Instagram ke liye image attach karo).
    - Auto-publish OFF: post approval me rukegi → "Approve & publish now".
    - Auto-publish ON: agent seedha publish kar dega jab aap bolo.
+5. **Create post → Generate with AI** (AI Pilot) se caption likhwao.
+6. Marketing site par **Request demo** → calendar se slot book → dono ko email jata hai.
 
 ## Kya live hai, kya abhi demo
 
 | Live (asli) | Abhi sample/demo |
 |---|---|
-| Login, AI Agent, Facebook Page + Instagram posting, scheduling, calendar, approvals, bulk import, image upload | Analytics, reports, competitor, inbox (sample numbers); X/LinkedIn/TikTok/YouTube connect ("Coming soon") |
+| Sign up + email verification, password reset, demo booking, Login, AI Agent, AI Pilot, Facebook Page + Instagram posting, scheduling, calendar, approvals, bulk import, image upload | Analytics, reports, competitor, inbox (sample numbers); X/LinkedIn/TikTok/YouTube connect ("Coming soon") |

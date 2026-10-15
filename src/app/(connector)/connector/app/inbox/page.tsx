@@ -77,7 +77,7 @@ export default function InboxPage() {
               <div className="flex-1 space-y-3 overflow-y-auto rounded-xl bg-canvas p-4">
                 {convo.messages.map((m) => (
                   <div key={m.id} className={`flex flex-col ${m.mine ? "items-end" : "items-start"}`}>
-                    <p className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.mine ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm bg-white text-ink ring-1 ring-line"}`}>{m.text}</p>
+                    <p className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.mine ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm bg-surface text-ink ring-1 ring-line"}`}>{m.text}</p>
                     <span className="mt-1 text-[11px] text-muted">{new Date(m.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                 ))}

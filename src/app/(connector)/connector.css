@@ -24,6 +24,35 @@
   --hp-orange: #fea419;
   --hp-danger: #fc5185;
   --hp-danger-tint: #ffe8ef;
+  --hp-surface: #ffffff;
+  --hp-surface-2: #ffffff;
+  --hp-warn-tint: #fff3d1;
+  --hp-warn-ink: #8a6100;
+  --hp-rail: #ffffff;
+  --hp-accent: #673de6;
+}
+
+/* Dashboard dark mode (hPanel style). Applied to the app shell only. */
+.theme-dark {
+  color-scheme: dark;
+  --hp-primary: #7c5cff;
+  --hp-primary-hover: #8f75ff;
+  --hp-primary-tint: rgba(140, 133, 255, 0.16);
+  --hp-primary-soft: rgba(140, 133, 255, 0.08);
+  --hp-meteorite: #a9a3ff;
+  --hp-ink: #f2f2f4;
+  --hp-ink-2: #c9cad1;
+  --hp-muted: #9a9ba5;
+  --hp-canvas: #141416;
+  --hp-surface: #1d1e21;
+  --hp-surface-2: #26272b;
+  --hp-line: #34353b;
+  --hp-success-tint: rgba(0, 176, 144, 0.16);
+  --hp-danger-tint: rgba(252, 81, 133, 0.14);
+  --hp-warn-tint: rgba(255, 205, 53, 0.14);
+  --hp-warn-ink: #ffd666;
+  --hp-rail: #18191b;
+  --hp-accent: #b0a8ff;
 }
 
 @theme inline {
@@ -45,6 +74,12 @@
   --color-orange: var(--hp-orange);
   --color-danger: var(--hp-danger);
   --color-danger-tint: var(--hp-danger-tint);
+  --color-surface: var(--hp-surface);
+  --color-surface-2: var(--hp-surface-2);
+  --color-warn-tint: var(--hp-warn-tint);
+  --color-warn-ink: var(--hp-warn-ink);
+  --color-rail: var(--hp-rail);
+  --color-accent: var(--hp-accent);
   --font-sans: var(--font-dm), system-ui, sans-serif;
 }
 
@@ -65,9 +100,11 @@ body {
   color: #fff;
 }
 
-:focus-visible {
-  outline: 2px solid var(--hp-primary);
-  outline-offset: 2px;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--hp-primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
@@ -115,7 +152,7 @@ body {
   background: var(--hp-canvas);
 }
 .btn-white {
-  background: #fff;
+  background: var(--hp-surface);
   color: var(--hp-primary);
 }
 .btn-white:hover {
@@ -123,16 +160,16 @@ body {
 }
 
 .card {
-  background: #fff;
+  background: var(--hp-surface);
   border: 1px solid var(--hp-line);
   border-radius: 12px;
 }
 
 .field {
   width: 100%;
-  border: 1px solid #d5d6e2;
+  border: 1px solid var(--hp-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--hp-surface-2);
   padding: 0.6rem 0.8rem;
   font-size: 0.9rem;
   color: var(--hp-ink);
@@ -289,4 +326,9 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* In dark mode, purple text uses the lighter accent so it stays readable. */
+.theme-dark .text-primary {
+  color: var(--hp-accent);
 }

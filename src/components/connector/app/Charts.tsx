@@ -19,12 +19,12 @@ export function LineChart({ data, labels, height = 220, color = "#673DE6" }: { d
       </defs>
       {[0, 1, 2, 3].map((k) => {
         const y = pad + (k * (h - pad * 2)) / 3;
-        return <line key={k} x1={pad} x2={w - pad} y1={y} y2={y} stroke="#E3E4EE" strokeDasharray="4 4" />;
+        return <line key={k} x1={pad} x2={w - pad} y1={y} y2={y} stroke="var(--hp-line)" strokeDasharray="4 4" />;
       })}
       <path d={area} fill={`url(#${gid})`} />
       <path d={line} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="3.5" fill="#fff" stroke={color} strokeWidth="2">
+        <circle key={i} cx={x} cy={y} r="3.5" fill="var(--hp-surface)" stroke={color} strokeWidth="2">
           <title>{`${labels?.[i] ?? i + 1}: ${data[i]}`}</title>
         </circle>
       ))}
@@ -66,7 +66,7 @@ export function Donut({ parts }: { parts: { label: string; value: number; color:
   return (
     <div className="flex items-center gap-6">
       <svg viewBox="0 0 42 42" className="h-36 w-36 shrink-0 -rotate-90">
-        <circle cx="21" cy="21" r={r} fill="none" stroke="#F4F5FF" strokeWidth="6" />
+        <circle cx="21" cy="21" r={r} fill="none" stroke="var(--hp-canvas)" strokeWidth="6" />
         {parts.map((p, i) => (
           <circle key={p.label} cx="21" cy="21" r={r} fill="none" stroke={p.color} strokeWidth="6" strokeDasharray={`${pcts[i]} ${100 - pcts[i]}`} strokeDashoffset={-offsets[i]} />
         ))}

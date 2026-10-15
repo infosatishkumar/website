@@ -45,9 +45,10 @@ function agent_tools(): array
 
 function agent_system_prompt(): string
 {
-    $auto = setting('autopublish', '0') === '1';
+    $auto = user_setting('autopublish', '0') === '1';
+    $name = current_user()['name'] ?? 'there';
     return "You are the AI Agent inside Social Media Connector, a social media management dashboard. "
-        . "You help the owner plan, write and publish posts to their connected Facebook Pages and Instagram Business accounts.\n\n"
+        . "You are talking to $name. You help them plan, write and publish posts to their connected Facebook Pages and Instagram Business accounts.\n\n"
         . "How to work:\n"
         . "- Reply in the language the owner writes in (Hindi, Hinglish or English).\n"
         . "- Write captions that fit each network: Instagram gets line breaks, emojis in moderation and 5–10 relevant hashtags; Facebook gets a shorter, conversational caption.\n"
@@ -65,11 +66,15 @@ function agent_run_tool(string $name, array $input): string
 {
     $pdo = db();
     if ($name === 'list_accounts') {
-        $rows = $pdo->query('SELECT id, network, name, handle FROM accounts ORDER BY id')->fetchAll();
+        $q = $pdo->prepare('SELECT id, network, name, handle FROM accounts WHERE user_id = ? ORDER BY id');
+        $q->execute([uid()]);
+        $rows = $q->fetchAll();
         return $rows ? json_encode($rows) : 'No accounts are connected yet. Ask the owner to connect Facebook & Instagram on the Accounts page.';
     }
     if ($name === 'list_recent_posts') {
-        $rows = $pdo->query('SELECT id, text, account_ids, status, scheduled_at, result FROM posts ORDER BY id DESC LIMIT 15')->fetchAll();
+        $q = $pdo->prepare('SELECT id, text, account_ids, status, scheduled_at, result FROM posts WHERE user_id = ? ORDER BY id DESC LIMIT 15');
+        $q->execute([uid()]);
+        $rows = $q->fetchAll();
         return json_encode($rows);
     }
     if ($name === 'create_post') {
@@ -80,7 +85,9 @@ function agent_run_tool(string $name, array $input): string
         if (!$ids || $text === '') {
             return 'Error: account_ids and text are required.';
         }
-        $known = $pdo->query('SELECT id, network FROM accounts')->fetchAll(PDO::FETCH_KEY_PAIR);
+        $k = $pdo->prepare('SELECT id, network FROM accounts WHERE user_id = ?');
+        $k->execute([uid()]);
+        $known = $k->fetchAll(PDO::FETCH_KEY_PAIR);
         foreach ($ids as $id) {
             if (!isset($known[$id])) {
                 return "Error: account $id does not exist. Call list_accounts.";
@@ -97,15 +104,15 @@ function agent_run_tool(string $name, array $input): string
             }
             $at = gmdate('Y-m-d\TH:i:s\Z', $ts);
         }
-        $auto = setting('autopublish', '0') === '1';
+        $auto = user_setting('autopublish', '0') === '1';
         $status = match (true) {
             $when === 'draft' => 'draft',
             !$auto => 'pending',
             $when === 'schedule' => 'scheduled',
             default => 'scheduled', // "now" → published right below
         };
-        $pdo->prepare('INSERT INTO posts (text, account_ids, media, scheduled_at, status, author, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-            ->execute([$text, json_encode($ids), json_encode($media), $at, $status, 'AI Agent', now_iso()]);
+        $pdo->prepare('INSERT INTO posts (user_id, text, account_ids, media, scheduled_at, status, author, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([uid(), $text, json_encode($ids), json_encode($media), $at, $status, 'AI Agent', now_iso()]);
         $postId = (int) $pdo->lastInsertId();
         $GLOBALS['agent_created_posts'][] = (string) $postId;
 
@@ -137,41 +144,63 @@ function image_block(string $url): ?array
     return ['type' => 'image', 'source' => ['type' => 'base64', 'mediaType' => $mime, 'data' => base64_encode((string) file_get_contents($file))]];
 }
 
-function agent_load_thread(): array
+/** Lists the current user's chats, newest first. */
+function agent_threads(): array
 {
-    $row = db()->query('SELECT * FROM agent_threads ORDER BY id DESC LIMIT 1')->fetch();
+    $s = db()->prepare('SELECT id, title, updated_at FROM agent_threads WHERE user_id = ? ORDER BY updated_at DESC LIMIT 50');
+    $s->execute([uid()]);
+    return array_map(fn ($r) => ['id' => (string) $r['id'], 'title' => $r['title'], 'updatedAt' => $r['updated_at']], $s->fetchAll());
+}
+
+function agent_load_thread(int $id): array
+{
+    $s = db()->prepare('SELECT * FROM agent_threads WHERE id = ? AND user_id = ?');
+    $s->execute([$id, uid()]);
+    $row = $s->fetch();
     if (!$row) {
-        return ['id' => null, 'history' => [], 'transcript' => []];
+        return ['id' => null, 'title' => 'New chat', 'history' => [], 'transcript' => []];
     }
     return [
         'id' => (int) $row['id'],
+        'title' => $row['title'],
         'history' => json_decode((string) $row['history'], true) ?: [],
         'transcript' => json_decode($row['transcript'], true) ?: [],
     ];
 }
 
-function agent_save_thread(array $thread): void
+function agent_save_thread(array &$thread): void
 {
     $pdo = db();
     if ($thread['id']) {
-        $pdo->prepare('UPDATE agent_threads SET history = ?, transcript = ?, updated_at = ? WHERE id = ?')
-            ->execute([json_encode($thread['history']), json_encode($thread['transcript']), now_iso(), $thread['id']]);
+        $pdo->prepare('UPDATE agent_threads SET history = ?, transcript = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+            ->execute([json_encode($thread['history']), json_encode($thread['transcript']), now_iso(), $thread['id'], uid()]);
     } else {
-        $pdo->prepare('INSERT INTO agent_threads (history, transcript, updated_at) VALUES (?, ?, ?)')
-            ->execute([json_encode($thread['history']), json_encode($thread['transcript']), now_iso()]);
+        $pdo->prepare('INSERT INTO agent_threads (user_id, title, history, transcript, updated_at) VALUES (?, ?, ?, ?, ?)')
+            ->execute([uid(), $thread['title'], json_encode($thread['history']), json_encode($thread['transcript']), now_iso()]);
+        $thread['id'] = (int) $pdo->lastInsertId();
     }
 }
 
-/** Runs one owner message through the agent loop and returns the updated transcript. */
-function agent_message(string $text, array $images): array
+function claude_client(): Client
 {
-    $cfg = config();
-    if (empty($cfg['anthropic_api_key'])) {
-        throw new RuntimeException('Add your Claude API key to smc-config.php to use the AI Agent.');
+    $key = (string) (config()['anthropic_api_key'] ?? '');
+    if ($key === '') {
+        throw new RuntimeException('Add your Claude API key to smc-config.php to use AI features.');
     }
+    return new Client(apiKey: $key);
+}
+
+/** Runs one message through the agent loop and returns the updated chat. */
+function agent_message(?int $threadId, string $text, array $images): array
+{
+    $client = claude_client();
+    use_ai_credit();
     @set_time_limit(300);
 
-    $thread = agent_load_thread();
+    $thread = $threadId ? agent_load_thread($threadId) : ['id' => null, 'title' => 'New chat', 'history' => [], 'transcript' => []];
+    if (!$thread['id']) {
+        $thread['title'] = mb_strimwidth(preg_replace('/\s+/', ' ', $text) ?? $text, 0, 60, '…');
+    }
     $images = array_values(array_filter($images, 'is_own_upload'));
 
     $content = [];
@@ -185,13 +214,11 @@ function agent_message(string $text, array $images): array
     $thread['history'][] = ['role' => 'user', 'content' => $content];
     $thread['transcript'][] = ['role' => 'user', 'text' => $text, 'images' => $images, 'at' => now_iso()];
 
-    $client = new Client(apiKey: $cfg['anthropic_api_key']);
     $GLOBALS['agent_created_posts'] = [];
     $reply = '';
-
     for ($step = 0; $step < AGENT_MAX_STEPS; $step++) {
         $response = $client->beta->messages->create(
-            model: $cfg['anthropic_model'] ?? 'claude-opus-5-5',
+            model: config()['anthropic_model'],
             maxTokens: 16000,
             system: agent_system_prompt(),
             messages: $thread['history'],
@@ -202,13 +229,11 @@ function agent_message(string $text, array $images): array
         );
         // Keep the full content (thinking, fallback and tool blocks) so the next turn stays valid.
         $thread['history'][] = ['role' => 'assistant', 'content' => $response->content];
-
         foreach ($response->content as $block) {
             if ($block->type === 'text') {
                 $reply .= ($reply === '' ? '' : "\n\n") . $block->text;
             }
         }
-
         if ($response->stopReason === 'refusal') {
             $reply = $reply ?: 'Sorry, I can’t help with that request.';
             break;
@@ -216,15 +241,13 @@ function agent_message(string $text, array $images): array
         if ($response->stopReason !== 'tool_use') {
             break;
         }
-
         $results = [];
         foreach ($response->content as $block) {
             if ($block->type !== 'tool_use') {
                 continue;
             }
             try {
-                $out = agent_run_tool($block->name, (array) $block->input);
-                $results[] = ['type' => 'tool_result', 'toolUseID' => $block->id, 'content' => $out];
+                $results[] = ['type' => 'tool_result', 'toolUseID' => $block->id, 'content' => agent_run_tool($block->name, (array) $block->input)];
             } catch (Throwable $e) {
                 $results[] = ['type' => 'tool_result', 'toolUseID' => $block->id, 'content' => 'Error: ' . $e->getMessage(), 'isError' => true];
             }
@@ -232,12 +255,48 @@ function agent_message(string $text, array $images): array
         $thread['history'][] = ['role' => 'user', 'content' => $results];
     }
 
-    $thread['transcript'][] = [
-        'role' => 'assistant',
-        'text' => $reply !== '' ? $reply : 'Done.',
-        'postIds' => $GLOBALS['agent_created_posts'],
-        'at' => now_iso(),
-    ];
+    $thread['transcript'][] = ['role' => 'assistant', 'text' => $reply !== '' ? $reply : 'Done.', 'postIds' => $GLOBALS['agent_created_posts'], 'at' => now_iso()];
     agent_save_thread($thread);
-    return $thread['transcript'];
+    return ['threadId' => (string) $thread['id'], 'title' => $thread['title'], 'transcript' => $thread['transcript'], 'credits' => ai_credits_left()];
+}
+
+/** AI Pilot: three caption options for the composer. */
+function ai_captions(string $idea, string $tone, array $networks): array
+{
+    $client = claude_client();
+    use_ai_credit();
+    $nets = $networks ? implode(', ', array_map('strval', $networks)) : 'Facebook and Instagram';
+    $response = $client->beta->messages->create(
+        model: config()['anthropic_model'],
+        maxTokens: 4000,
+        system: 'You write social media captions for small businesses. Match the language the user writes in (Hindi, Hinglish or English).',
+        messages: [[
+            'role' => 'user',
+            'content' => "Write 3 different captions for: $idea\nTone: $tone\nNetworks: $nets\nKeep each under 600 characters, add a clear call to action and 3–6 relevant hashtags.",
+        ]],
+        outputConfig: [
+            'effort' => 'low',
+            'format' => [
+                'type' => 'json_schema',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => ['captions' => ['type' => 'array', 'items' => ['type' => 'string']]],
+                    'required' => ['captions'],
+                    'additionalProperties' => false,
+                ],
+            ],
+        ],
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+    );
+    if ($response->stopReason === 'refusal') {
+        fail('The AI could not write captions for this idea. Try rephrasing it.');
+    }
+    foreach ($response->content as $block) {
+        if ($block->type === 'text') {
+            $data = json_decode($block->text, true);
+            return ['captions' => array_slice(array_values(array_filter((array) ($data['captions'] ?? []), 'is_string')), 0, 3), 'credits' => ai_credits_left()];
+        }
+    }
+    fail('The AI returned no captions. Please try again.');
 }

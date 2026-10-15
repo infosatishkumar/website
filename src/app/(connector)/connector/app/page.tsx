@@ -8,7 +8,7 @@ import { APP } from "@/lib/connector/data";
 export default function AppIndex() {
   const router = useRouter();
   useEffect(() => {
-    router.replace(`${APP}/launchpad/`);
+    router.replace(`${APP}/launchpad/${window.location.search}`);
   }, [router]);
   return null;
 }

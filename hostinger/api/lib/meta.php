@@ -70,8 +70,11 @@ function meta_login_url(string $state): string
     return 'https://www.facebook.com/' . config()['graph_version'] . '/dialog/oauth?' . http_build_query($params);
 }
 
-/** Exchanges the OAuth code and stores every Page (and its linked Instagram account). Returns count. */
-function meta_handle_callback(string $code): int
+/**
+ * Exchanges the OAuth code and keeps the Pages / Instagram accounts it can manage
+ * as "pending" for the current user, so they can pick which ones to connect.
+ */
+function meta_handle_callback(string $code, string $kind): int
 {
     $cfg = config();
     $short = graph('GET', 'oauth/access_token', [
@@ -88,25 +91,66 @@ function meta_handle_callback(string $code): int
         'fb_exchange_token' => $short['access_token'],
     ]);
     $pages = graph('GET', 'me/accounts', [
-        'fields' => 'id,name,access_token,instagram_business_account{id,username}',
+        'fields' => 'id,name,access_token,picture{url},instagram_business_account{id,username,profile_picture_url}',
         'limit' => 100,
         'access_token' => $long['access_token'],
     ]);
 
-    $upsert = db()->prepare('INSERT INTO accounts (network, external_id, name, handle, access_token, connected_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(network, external_id) DO UPDATE SET name = excluded.name, handle = excluded.handle, access_token = excluded.access_token');
-    $count = 0;
+    $items = [];
     foreach ($pages['data'] ?? [] as $page) {
-        $upsert->execute(['facebook', $page['id'], $page['name'], $page['id'], $page['access_token'], now_iso()]);
-        $count++;
+        if ($kind !== 'instagram') {
+            $items[] = ['key' => 'facebook:' . $page['id'], 'network' => 'facebook', 'external_id' => $page['id'], 'name' => $page['name'],
+                'handle' => $page['id'], 'picture' => $page['picture']['data']['url'] ?? '', 'token' => $page['access_token']];
+        }
         $ig = $page['instagram_business_account'] ?? null;
-        if ($ig) {
-            $upsert->execute(['instagram', $ig['id'], $ig['username'] ?? $page['name'], $ig['username'] ?? '', $page['access_token'], now_iso()]);
-            $count++;
+        if ($ig && $kind !== 'facebook') {
+            $items[] = ['key' => 'instagram:' . $ig['id'], 'network' => 'instagram', 'external_id' => $ig['id'], 'name' => $ig['username'] ?? $page['name'],
+                'handle' => $ig['username'] ?? '', 'picture' => $ig['profile_picture_url'] ?? '', 'token' => $page['access_token'], 'via' => $page['name']];
         }
     }
-    return $count;
+    db()->prepare('INSERT INTO pending_accounts (user_id, kind, data, created_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET kind = excluded.kind, data = excluded.data, created_at = excluded.created_at')
+        ->execute([uid(), $kind, json_encode($items), time()]);
+    return count($items);
+}
+
+/** Pending accounts for the picker (without tokens). */
+function meta_pending(): array
+{
+    $s = db()->prepare('SELECT * FROM pending_accounts WHERE user_id = ? AND created_at > ?');
+    $s->execute([uid(), time() - 3600]);
+    $row = $s->fetch();
+    if (!$row) {
+        return ['kind' => '', 'items' => []];
+    }
+    $connected = db()->prepare('SELECT network || char(58) || external_id FROM accounts WHERE user_id = ?');
+    $connected->execute([uid()]);
+    $have = array_flip($connected->fetchAll(PDO::FETCH_COLUMN));
+    $items = array_map(fn ($i) => [
+        'key' => $i['key'], 'network' => $i['network'], 'name' => $i['name'], 'handle' => $i['handle'],
+        'picture' => $i['picture'], 'via' => $i['via'] ?? '', 'connected' => isset($have[$i['key']]),
+    ], json_decode($row['data'], true) ?: []);
+    return ['kind' => $row['kind'], 'items' => $items];
+}
+
+/** Connects the chosen pending accounts. Returns how many were added or refreshed. */
+function meta_connect_selected(array $keys): int
+{
+    $s = db()->prepare('SELECT data FROM pending_accounts WHERE user_id = ?');
+    $s->execute([uid()]);
+    $items = json_decode((string) $s->fetchColumn(), true) ?: [];
+    $want = array_flip(array_map('strval', $keys));
+    $upsert = db()->prepare('INSERT INTO accounts (user_id, network, external_id, name, handle, access_token, connected_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(network, external_id) DO UPDATE SET user_id = excluded.user_id, name = excluded.name, handle = excluded.handle, access_token = excluded.access_token');
+    $n = 0;
+    foreach ($items as $i) {
+        if (isset($want[$i['key']])) {
+            $upsert->execute([uid(), $i['network'], $i['external_id'], $i['name'], $i['handle'], $i['token'], now_iso()]);
+            $n++;
+        }
+    }
+    return $n;
 }
 
 /** Publishes to one account. Returns the network's post id. */
@@ -189,8 +233,8 @@ function publish_post(int $postId): array
     $results = [];
     $ok = 0;
     foreach ($ids as $aid) {
-        $a = $pdo->prepare('SELECT * FROM accounts WHERE id = ?');
-        $a->execute([$aid]);
+        $a = $pdo->prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?');
+        $a->execute([$aid, $post['user_id']]);
         $account = $a->fetch();
         if (!$account) {
             $results[$aid] = ['ok' => false, 'error' => 'Account no longer connected'];

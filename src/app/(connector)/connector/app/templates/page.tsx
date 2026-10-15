@@ -30,7 +30,7 @@ export default function TemplatesPage() {
       <PageHeader title="Content bank" sub="Ready-to-post captions for every industry and occasion." />
       <div className="mb-5 flex flex-wrap gap-2">
         {cats.map((c) => (
-          <button key={c} type="button" onClick={() => setCat(c)} className={`rounded-full px-4 py-1.5 text-sm font-bold ring-1 ${cat === c ? "bg-primary text-white ring-primary" : "bg-white text-ink-2 ring-line"}`}>{c}</button>
+          <button key={c} type="button" onClick={() => setCat(c)} className={`rounded-full px-4 py-1.5 text-sm font-bold ring-1 ${cat === c ? "bg-primary text-white ring-primary" : "bg-surface text-ink-2 ring-line"}`}>{c}</button>
         ))}
       </div>
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

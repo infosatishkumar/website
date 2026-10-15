@@ -33,11 +33,17 @@ async function call<T>(action: string, init?: RequestInit): Promise<T> {
 export const get = <T>(action: string) => call<T>(action);
 export const post = <T>(action: string, body: unknown = {}) => call<T>(action, { method: "POST", body: JSON.stringify(body) });
 
+export type User = { id: string; name: string; email: string };
+
 export type BackendStatus = {
   backend: boolean;
   loggedIn: boolean;
-  configured: { anthropic: boolean; meta: boolean };
+  user: User | null;
+  signupOpen: boolean;
+  configured: { anthropic: boolean; meta: boolean; email: boolean };
   autopublish: boolean;
+  credits: number;
+  creditsPerDay: number;
 };
 
 export async function uploadImage(file: File): Promise<string> {
@@ -47,7 +53,7 @@ export async function uploadImage(file: File): Promise<string> {
   return url;
 }
 
-export const META_CONNECT_URL = `${BASE}meta_connect`;
+export const metaConnectUrl = (kind: "facebook" | "instagram") => `${BASE}meta_connect&kind=${kind}`;
 
 export type Health = { ok: boolean; problems: string[]; info: { php: string; config_expected_at?: string } };
 

@@ -53,7 +53,7 @@ export default function AnalyticsView() {
         title={`${networkMeta[id].name} analytics`}
         sub={accounts.length ? accounts.map((a) => a.name).join(", ") : "No account connected for this network yet."}
         actions={
-          <div className="flex overflow-hidden rounded-lg border border-line bg-white">
+          <div className="flex overflow-hidden rounded-lg border border-line bg-surface">
             {(Object.keys(ranges) as (keyof typeof ranges)[]).map((r) => (
               <button key={r} type="button" onClick={() => setRange(r)} className={`px-3 py-2 text-sm font-bold ${range === r ? "bg-primary text-white" : "text-ink-2"}`}>Last {r}</button>
             ))}
@@ -62,7 +62,7 @@ export default function AnalyticsView() {
       />
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         {tabs.map((t) => (
-          <Link key={t.slug} href={`${APP}/analytics/${t.slug}`} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ring-1 ${t.id === id ? "bg-white text-primary ring-primary" : "bg-white text-ink-2 ring-line"}`}>
+          <Link key={t.slug} href={`${APP}/analytics/${t.slug}`} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ring-1 ${t.id === id ? "bg-surface text-primary ring-primary" : "bg-surface text-ink-2 ring-line"}`}>
             <SocialIcon id={t.id} size={18} rounded="full" /> {networkMeta[t.id].name.replace(" (Twitter)", "")}
           </Link>
         ))}

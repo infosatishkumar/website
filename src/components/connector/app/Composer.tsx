@@ -8,8 +8,8 @@ import SocialIcon, { networkMeta, type NetworkId } from "../SocialIcon";
 import AccountPicker from "./AccountPicker";
 import { Card, DemoNote, PageHeader } from "./ui";
 import { APP } from "@/lib/connector/data";
-import { uploadImage } from "@/lib/connector/api";
-import { addPost, type PostStatus, reportError, useLive, useWorkspace, type QueueSlot } from "@/lib/connector/store";
+import { post, uploadImage } from "@/lib/connector/api";
+import { addPost, type PostStatus, reportError, setCreditsLocal, useLive, useWorkspace, type QueueSlot } from "@/lib/connector/store";
 
 const limits: Record<NetworkId, number> = {
   x: 280, bluesky: 300, threads: 500, pinterest: 500, google: 1500, instagram: 2200,
@@ -17,7 +17,20 @@ const limits: Record<NetworkId, number> = {
 };
 
 const tones = ["Friendly", "Professional", "Witty", "Bold"] as const;
-const ideas = ["World Mental Health Day", "Diwali sale", "Behind the scenes", "Customer shout-out", "New product launch"];
+const occasions: [string, string][] = [
+  ["01-26", "Republic Day"], ["02-14", "Valentine's Day"], ["03-08", "Women's Day"], ["04-22", "Earth Day"], ["05-01", "Labour Day"],
+  ["06-21", "International Yoga Day"], ["07-11", "World Population Day"], ["08-15", "Independence Day"], ["09-05", "Teachers' Day"],
+  ["10-02", "Gandhi Jayanti"], ["10-10", "World Mental Health Day"], ["10-31", "Halloween"], ["11-08", "Diwali"], ["11-27", "Black Friday"],
+  ["12-25", "Christmas"], ["12-31", "New Year's Eve"],
+];
+
+/** The next few occasions from today, for AI Pilot idea chips. */
+function upcomingIdeas(from: number) {
+  const d = new Date(from);
+  const key = `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const after = occasions.filter(([k]) => k >= key);
+  return [...after, ...occasions].slice(0, 3).map(([, n]) => n).concat(["Behind the scenes", "Customer shout-out"]);
+}
 
 /** Template-based caption drafts — swap for a real model call when an AI backend is connected. */
 function draftCaptions(idea: string, tone: (typeof tones)[number]) {
@@ -96,6 +109,9 @@ export default function Composer() {
   const [idea, setIdea] = useState("");
   const [tone, setTone] = useState<(typeof tones)[number]>("Friendly");
   const [drafts, setDrafts] = useState<string[]>([]);
+  const [pilot, setPilot] = useState(false);
+  const [pilotBusy, setPilotBusy] = useState(false);
+  const [ideas] = useState(() => upcomingIdeas(Date.now()));
   const [preview, setPreview] = useState<NetworkId | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -119,6 +135,24 @@ export default function Composer() {
       el.focus();
       el.selectionStart = el.selectionEnd = s + snippet.length;
     });
+  };
+
+  const generate = async (topic: string) => {
+    if (!topic.trim()) return;
+    if (!live) {
+      setDrafts(draftCaptions(topic, tone));
+      return;
+    }
+    setPilotBusy(true);
+    try {
+      const r = await post<{ captions: string[]; credits: number }>("ai_captions", { idea: topic, tone, networks: nets });
+      setDrafts(r.captions);
+      setCreditsLocal(r.credits);
+    } catch (e) {
+      reportError(e);
+    } finally {
+      setPilotBusy(false);
+    }
   };
 
   const submit = async (status: PostStatus, mode: "now" | "time" | "queue" | "draft") => {
@@ -219,7 +253,14 @@ export default function Composer() {
             </div>
           </Card>
 
-          <Card title="Caption">
+          <Card
+            title="Caption"
+            action={
+              <button type="button" onClick={() => setPilot((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full bg-primary-tint px-3 py-1 text-xs font-bold text-accent">
+                <Icon name="sparkles" size={14} /> Generate with AI
+              </button>
+            }
+          >
             <textarea
               ref={textRef}
               value={text}
@@ -301,32 +342,6 @@ export default function Composer() {
         </div>
 
         <div className="space-y-6">
-          <Card title={<span className="flex items-center gap-2"><Icon name="sparkles" size={18} className="text-primary" />AI Pilot</span>}>
-            <textarea value={idea} onChange={(e) => setIdea(e.target.value)} rows={2} className="field" placeholder="Share your idea, audience and goal…" />
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {tones.map((t) => (
-                <button key={t} type="button" onClick={() => setTone(t)} className={`rounded-full px-3 py-1 text-xs font-bold ${tone === t ? "bg-primary text-white" : "bg-canvas text-ink-2"}`}>{t}</button>
-              ))}
-            </div>
-            <button type="button" onClick={() => setDrafts(draftCaptions(idea, tone))} className="btn btn-primary btn-sm mt-3 w-full">Generate</button>
-            <p className="mt-4 text-xs font-bold text-muted"><Icon name="zap" size={14} className="mr-1 inline" />Ideas</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {ideas.map((i) => (
-                <button key={i} type="button" onClick={() => { setIdea(i); setDrafts(draftCaptions(i, tone)); }} className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 hover:border-primary hover:text-primary">{i}</button>
-              ))}
-            </div>
-            {drafts.length > 0 && (
-              <ul className="mt-4 space-y-2">
-                {drafts.map((d) => (
-                  <li key={d} className="rounded-xl bg-primary-soft p-3 text-sm text-ink">
-                    {d}
-                    <button type="button" onClick={() => setText(d)} className="mt-2 block text-xs font-bold text-primary">Use this caption</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
           <Card title="Preview">
             {nets.length === 0 ? (
               <p className="text-sm text-muted">Select accounts to see a preview.</p>
@@ -362,6 +377,76 @@ export default function Composer() {
           {!live && <DemoNote>Demo mode: posts are saved to this browser only. On your Hostinger site with the backend set up, they publish for real.</DemoNote>}
         </div>
       </div>
+      {pilot && (
+        <div className="menu-in fixed bottom-4 right-4 z-50 flex max-h-[80vh] w-[min(400px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border-2 border-primary bg-surface shadow-2xl">
+          <div className="flex items-center justify-between border-b border-line px-5 py-3">
+            <p className="flex items-center gap-2 text-lg font-bold text-ink">
+              <Icon name="sparkles" size={18} className="text-accent" /> AI Pilot
+            </p>
+            <div className="flex items-center gap-2">
+              {live && <span className="text-xs text-muted">{liveStatus?.credits ?? 0} credits</span>}
+              <button type="button" onClick={() => setPilot(false)} className="rounded-lg p-1 text-muted hover:bg-surface-2" aria-label="Close AI Pilot">
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5">
+            <p className="text-sm text-ink">
+              <Icon name="sparkles" size={14} className="mr-1 inline text-warning" />
+              Hi {liveStatus?.user?.name?.split(" ")[0] ?? "there"}! Let&apos;s create some engaging content
+            </p>
+            <textarea value={idea} onChange={(e) => setIdea(e.target.value)} rows={3} className="field mt-3" placeholder="Share your idea, audience and goal… e.g. Write a post for different types of pizzas at Johnny's Pizzeria" />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tones.map((t) => (
+                <button key={t} type="button" onClick={() => setTone(t)} className={`rounded-full px-3 py-1 text-xs font-bold ${tone === t ? "bg-primary text-white" : "bg-surface-2 text-ink-2"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <button type="button" disabled={pilotBusy || !idea.trim()} onClick={() => generate(idea)} className="btn btn-primary btn-sm mt-3 disabled:opacity-50">
+              {pilotBusy ? "Generating…" : "Generate"}
+            </button>
+            <p className="mt-5 flex items-center gap-1.5 text-xs font-bold text-muted">
+              <Icon name="zap" size={14} /> Ideas
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {ideas.map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setIdea(i);
+                    generate(i);
+                  }}
+                  className="rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 hover:border-primary hover:text-ink"
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
+            {drafts.length > 0 && (
+              <ul className="mt-5 space-y-2">
+                {drafts.map((d) => (
+                  <li key={d} className="rounded-xl bg-primary-soft p-3 text-sm text-ink">
+                    <span className="whitespace-pre-wrap">{d}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setText(d);
+                        setPilot(false);
+                      }}
+                      className="mt-2 block text-xs font-bold text-primary"
+                    >
+                      Use this caption
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!live && <p className="mt-4 text-xs text-muted">Demo mode: captions come from templates. On your live site they’re written by Claude.</p>}
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -4,6 +4,7 @@ import Icon, { IconTile } from "../Icon";
 import SocialIcon, { networkIds } from "../SocialIcon";
 import { SceneFrame } from "./DemoPlayer";
 import VideoTrigger from "./VideoModal";
+import DemoButton from "./DemoBooking";
 import { APP, BASE, faqs, features, stats, testimonials, type VideoItem } from "@/lib/connector/data";
 
 export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -74,9 +75,9 @@ export function Hero({
                 <Icon name="play" size={16} /> Watch demo
               </VideoTrigger>
             ) : (
-              <Link href={`${BASE}/help#demo`} className="btn border border-white/30 px-8 py-4 text-base text-white hover:bg-white/10">
+              <DemoButton className="btn border border-white/30 px-8 py-4 text-base text-white hover:bg-white/10">
                 Talk to a human
-              </Link>
+              </DemoButton>
             )}
           </div>
           <p className="mt-5 flex items-center justify-center gap-4 text-sm text-white/60">

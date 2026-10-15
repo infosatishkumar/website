@@ -3,24 +3,40 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-/** Loads smc-config.php from above public_html (two levels up from /api/lib). */
+/** Loads smc-config.php (one level above public_html, or public_html as a fallback). */
 function config(): array
 {
     static $cfg = null;
     if ($cfg !== null) {
         return $cfg;
     }
-    $candidates = [
-        dirname(__DIR__, 3) . '/smc-config.php', // one level above public_html
-        dirname(__DIR__, 2) . '/smc-config.php', // fallback: inside public_html root (blocked by .htaccess)
-    ];
-    foreach ($candidates as $file) {
+    foreach ([dirname(__DIR__, 3) . '/smc-config.php', dirname(__DIR__, 2) . '/smc-config.php'] as $file) {
         if (is_file($file)) {
-            $cfg = require $file;
+            $cfg = (require $file) + [
+                'anthropic_model' => 'claude-opus-5-5',
+                'graph_version' => 'v23.0',
+                'signup_open' => true,
+                'agent_daily_limit' => 50,
+                'smtp_host' => 'smtp.hostinger.com',
+                'smtp_port' => 465,
+                'smtp_user' => '',
+                'smtp_pass' => '',
+                'mail_from' => '',
+                'mail_from_name' => 'Social Media Connector',
+                'demo_notify_email' => '',
+                'demo_timezone' => 'Asia/Kolkata',
+                'demo_hours' => ['10:00', '18:00'],
+                'demo_days' => [1, 2, 3, 4, 5, 6],
+            ];
             return $cfg;
         }
     }
     throw new RuntimeException('smc-config.php not found. Upload it one level above public_html.');
+}
+
+function base_url(): string
+{
+    return rtrim((string) config()['base_url'], '/');
 }
 
 function db(): PDO
@@ -33,38 +49,95 @@ function db(): PDO
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->exec('PRAGMA journal_mode = WAL');
+    migrate($pdo);
+    return $pdo;
+}
+
+function has_column(PDO $pdo, string $table, string $column): bool
+{
+    foreach ($pdo->query("PRAGMA table_info($table)")->fetchAll() as $c) {
+        if ($c['name'] === $column) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function migrate(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        password_hash TEXT NOT NULL,
+        verified_at TEXT,
+        verify_token TEXT,
+        reset_token TEXT,
+        reset_expires INTEGER,
+        created_at TEXT NOT NULL
+    )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        network TEXT NOT NULL,          -- facebook | instagram
-        external_id TEXT NOT NULL,      -- page id or instagram user id
+        user_id INTEGER NOT NULL DEFAULT 1,
+        network TEXT NOT NULL,
+        external_id TEXT NOT NULL,
         name TEXT NOT NULL,
         handle TEXT NOT NULL DEFAULT "",
-        access_token TEXT NOT NULL,     -- page access token (instagram uses its page token)
+        access_token TEXT NOT NULL,
         connected_at TEXT NOT NULL,
         UNIQUE(network, external_id)
     )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL DEFAULT 1,
         text TEXT NOT NULL,
-        account_ids TEXT NOT NULL,      -- JSON array of account ids
-        media TEXT NOT NULL DEFAULT "[]", -- JSON array of public image URLs
-        scheduled_at TEXT NOT NULL,     -- ISO-8601 UTC
-        status TEXT NOT NULL,           -- draft | pending | scheduled | publishing | published | failed
+        account_ids TEXT NOT NULL,
+        media TEXT NOT NULL DEFAULT "[]",
+        scheduled_at TEXT NOT NULL,
+        status TEXT NOT NULL,
         tag_ids TEXT NOT NULL DEFAULT "[]",
         author TEXT NOT NULL DEFAULT "You",
-        result TEXT NOT NULL DEFAULT "",  -- JSON per-account publish result / error
+        result TEXT NOT NULL DEFAULT "",
         created_at TEXT NOT NULL
     )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS agent_threads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        history TEXT NOT NULL,          -- JSON message history (API wire format)
-        transcript TEXT NOT NULL,       -- JSON list shown in the UI
+        user_id INTEGER NOT NULL DEFAULT 1,
+        title TEXT NOT NULL DEFAULT "New chat",
+        history TEXT NOT NULL,
+        transcript TEXT NOT NULL,
         updated_at TEXT NOT NULL
     )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)');
-    $pdo->exec('CREATE TABLE IF NOT EXISTS login_attempts (ip TEXT NOT NULL, at INTEGER NOT NULL)');
-    return $pdo;
+    $pdo->exec('CREATE TABLE IF NOT EXISTS rate_limits (ip TEXT NOT NULL, action TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL)');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS pending_accounts (
+        user_id INTEGER PRIMARY KEY,
+        kind TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    )');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS ai_usage (user_id INTEGER NOT NULL, day TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, day))');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS demo_bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slot_at TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        company TEXT NOT NULL DEFAULT "",
+        notes TEXT NOT NULL DEFAULT "",
+        created_at TEXT NOT NULL
+    )');
+    // Upgrades from the single-owner version: existing rows belong to user 1.
+    foreach (['accounts', 'posts', 'agent_threads'] as $t) {
+        if (!has_column($pdo, $t, 'user_id')) {
+            $pdo->exec("ALTER TABLE $t ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1");
+        }
+    }
+    if (!has_column($pdo, 'agent_threads', 'title')) {
+        $pdo->exec('ALTER TABLE agent_threads ADD COLUMN title TEXT NOT NULL DEFAULT "New chat"');
+    }
 }
+
+/* ---------------- settings, time, helpers ---------------- */
 
 function setting(string $key, ?string $default = null): ?string
 {
@@ -76,14 +149,43 @@ function setting(string $key, ?string $default = null): ?string
 
 function set_setting(string $key, string $value): void
 {
-    db()->prepare('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')
-        ->execute([$key, $value]);
+    db()->prepare('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')->execute([$key, $value]);
+}
+
+function user_setting(string $key, ?string $default = null): ?string
+{
+    return setting($key . ':' . uid(), $default);
+}
+
+function set_user_setting(string $key, string $value): void
+{
+    set_setting($key . ':' . uid(), $value);
 }
 
 function now_iso(): string
 {
     return gmdate('Y-m-d\TH:i:s\Z');
 }
+
+function client_ip(): string
+{
+    return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+}
+
+/** Allows $max hits per $window seconds per IP for an action; fails with 429 beyond that. */
+function rate_limit(string $action, int $max, int $window): void
+{
+    $pdo = db();
+    $pdo->prepare('DELETE FROM rate_limits WHERE at < ?')->execute([time() - 86400]);
+    $n = $pdo->prepare('SELECT COUNT(*) FROM rate_limits WHERE ip = ? AND action = ? AND at > ?');
+    $n->execute([client_ip(), $action, time() - $window]);
+    if ((int) $n->fetchColumn() >= $max) {
+        fail('Too many attempts. Please try again later.', 429);
+    }
+    $pdo->prepare('INSERT INTO rate_limits (ip, action, at) VALUES (?, ?, ?)')->execute([client_ip(), $action, time()]);
+}
+
+/* ---------------- sessions & users ---------------- */
 
 function start_session(): void
 {
@@ -92,7 +194,7 @@ function start_session(): void
     }
     session_name('smc_session');
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 60 * 60 * 24 * 30,
         'path' => '/',
         'secure' => (($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off'),
         'httponly' => true,
@@ -101,11 +203,54 @@ function start_session(): void
     session_start();
 }
 
-function is_logged_in(): bool
+function current_user(): ?array
 {
+    static $user = false;
+    if ($user !== false) {
+        return $user;
+    }
     start_session();
-    return !empty($_SESSION['smc_admin']);
+    $id = (int) ($_SESSION['uid'] ?? 0);
+    if (!$id) {
+        return $user = null;
+    }
+    $s = db()->prepare('SELECT * FROM users WHERE id = ? AND verified_at IS NOT NULL');
+    $s->execute([$id]);
+    return $user = ($s->fetch() ?: null);
 }
+
+function uid(): int
+{
+    $u = current_user();
+    if (!$u) {
+        fail('Please log in', 401);
+    }
+    return (int) $u['id'];
+}
+
+function user_public(array $u): array
+{
+    return ['id' => (string) $u['id'], 'name' => $u['name'], 'email' => $u['email']];
+}
+
+/** Messages the AI may still send today (agent + AI captions share it). */
+function ai_credits_left(): int
+{
+    $s = db()->prepare('SELECT count FROM ai_usage WHERE user_id = ? AND day = ?');
+    $s->execute([uid(), gmdate('Y-m-d')]);
+    return max(0, (int) config()['agent_daily_limit'] - (int) $s->fetchColumn());
+}
+
+function use_ai_credit(): void
+{
+    if (ai_credits_left() <= 0) {
+        fail('You have used today’s AI limit. It resets at midnight (UTC).', 429);
+    }
+    db()->prepare('INSERT INTO ai_usage (user_id, day, count) VALUES (?, ?, 1) ON CONFLICT(user_id, day) DO UPDATE SET count = count + 1')
+        ->execute([uid(), gmdate('Y-m-d')]);
+}
+
+/* ---------------- http ---------------- */
 
 function json_out(mixed $data, int $status = 200): never
 {
@@ -123,8 +268,7 @@ function fail(string $message, int $status = 400): never
 
 function body(): array
 {
-    $raw = file_get_contents('php://input') ?: '';
-    $data = json_decode($raw, true);
+    $data = json_decode(file_get_contents('php://input') ?: '', true);
     return is_array($data) ? $data : [];
 }
 
@@ -152,4 +296,12 @@ function post_public(array $p): array
         'author' => $p['author'],
         'result' => json_decode($p['result'] ?: '{}', true) ?: (object) [],
     ];
+}
+
+/** Loads a post owned by the current user or fails with 404. */
+function own_post(int $id): array
+{
+    $s = db()->prepare('SELECT * FROM posts WHERE id = ? AND user_id = ?');
+    $s->execute([$id, uid()]);
+    return $s->fetch() ?: fail('Post not found', 404);
 }

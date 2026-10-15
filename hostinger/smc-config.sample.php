@@ -1,34 +1,51 @@
 <?php
 /*
- * Social Media Connector — server config.
- *
- * 1. Copy this file to smc-config.php and fill in the values.
- * 2. Upload smc-config.php ONE LEVEL ABOVE public_html
- *    (e.g. /home/uXXXX/domains/yourdomain.com/smc-config.php),
- *    so it can never be downloaded from the web.
+ * Social Media Connector — server settings.
+ * Upload this file as smc-config.php ONE FOLDER ABOVE public_html:
+ *   domains/yourdomain.com/smc-config.php
  */
 return [
-    // Public address of the site, no trailing slash.
+    // Website address, no trailing slash.
     'base_url' => 'https://yourdomain.com',
 
-    // Dashboard login (only you). Use a long password.
-    'admin_email' => 'you@example.com',
-    'admin_password' => 'change-this-long-password',
+    // Owner login from the first version. After you log in once it becomes user #1
+    // (existing accounts and posts move to that user). New users sign up on the site.
+    'admin_email' => '',
+    'admin_password' => '',
 
-    // Claude API key from console.anthropic.com → API Keys (starts with sk-ant-api03-).
+    // Let anyone create an account (true) or only existing users (false).
+    'signup_open' => true,
+
+    // Claude API key (console.anthropic.com → API Keys).
     'anthropic_api_key' => '',
     'anthropic_model' => 'claude-opus-5-5',
+    // AI messages per user per day (agent chats + AI Pilot captions).
+    'agent_daily_limit' => 50,
 
-    // Meta app from developers.facebook.com (Facebook Login for Business).
+    // Email for verification, password reset and demo bookings (Hostinger mailbox).
+    'smtp_host' => 'smtp.hostinger.com',
+    'smtp_port' => 465,
+    'smtp_user' => 'contact@satishkumar.net',
+    'smtp_pass' => '',
+    'mail_from' => 'contact@satishkumar.net',
+    'mail_from_name' => 'Social Media Connector',
+
+    // Demo booking calendar.
+    'demo_notify_email' => 'contact@satishkumar.net',
+    'demo_timezone' => 'Asia/Kolkata',
+    'demo_hours' => ['10:00', '18:00'],
+    'demo_days' => [1, 2, 3, 4, 5, 6], // 1 = Monday … 7 = Sunday
+
+    // Meta app (developers.facebook.com → App settings → Basic).
     'meta_app_id' => '',
     'meta_app_secret' => '',
     // Facebook Login for Business → Configurations → Configuration ID (leave empty for classic Facebook Login).
     'meta_config_id' => '',
     'graph_version' => 'v23.0',
 
-    // Random string; protects the web-triggered cron URL.
+    // Random text that protects the web cron URL.
     'cron_secret' => 'change-this-random-string',
 
-    // Database file — keep it outside public_html (default: next to this file).
+    // Database file (keep as is).
     'db_path' => __DIR__ . '/smc-data.sqlite',
 ];

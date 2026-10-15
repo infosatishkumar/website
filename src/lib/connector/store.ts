@@ -210,7 +210,16 @@ export async function initLive(force = false) {
 export async function refreshLive() {
   const [accounts, posts] = await Promise.all([get<Account[]>("accounts"), get<Post[]>("posts")]);
   // Replace demo data; keep local-only lists (tags, library, groups…).
-  state = { ...load(), accounts, posts };
+  let base = load();
+  const userKey = String(live.status?.user?.id ?? "");
+  try {
+    // First time this user is live in this browser: drop the sample groups/inbox/feeds.
+    if (userKey && localStorage.getItem("smc-live-user") !== userKey) {
+      base = { ...base, groups: [], inbox: [], feeds: [], mentionGroups: [] };
+      localStorage.setItem("smc-live-user", userKey);
+    }
+  } catch {}
+  state = { ...base, accounts, posts };
   persistLocalOnly();
   listeners.forEach((l) => l());
 }
@@ -225,9 +234,57 @@ export function setAutopublishLocal(on: boolean) {
   if (live.status) setLive({ ...live, status: { ...live.status, autopublish: on } });
 }
 
+export function setCreditsLocal(credits: number) {
+  if (live.status) setLive({ ...live, status: { ...live.status, credits } });
+}
+
 export async function login(email: string, password: string) {
   await post("login", { email, password });
   await initLive(true);
+}
+
+export const signup = (name: string, email: string, password: string) => post<{ email: string }>("signup", { name, email, password });
+export const resendVerification = (email: string) => post("resend", { email });
+export const forgotPassword = (email: string) => post("forgot", { email });
+export const resetPassword = (token: string, password: string) => post("reset", { token, password });
+
+/* ---- theme (dashboard only) ---- */
+
+export type Theme = "light" | "dark";
+const THEME_KEY = "smc-theme";
+let theme: Theme | null = null;
+const themeListeners = new Set<() => void>();
+
+function readTheme(): Theme {
+  if (theme) return theme;
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
+    theme = "light";
+  }
+  return theme;
+}
+
+export function setTheme(t: Theme) {
+  theme = t;
+  try {
+    localStorage.setItem(THEME_KEY, t);
+  } catch {
+    /* ignore */
+  }
+  themeListeners.forEach((l) => l());
+}
+
+export function useTheme(): Theme {
+  return useSyncExternalStore(
+    (l) => {
+      themeListeners.add(l);
+      return () => themeListeners.delete(l);
+    },
+    readTheme,
+    () => "light" as Theme,
+  );
 }
 
 export async function logout() {

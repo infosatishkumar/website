@@ -32,7 +32,7 @@ export default function QueuePage() {
                   <p className="mb-2 text-sm font-bold text-ink">{d.slice(0, 3)}</p>
                   <ul className="space-y-1.5">
                     {slots.map((t) => (
-                      <li key={t} className="group flex items-center justify-between rounded-lg bg-white px-2.5 py-1.5 text-sm font-medium text-ink ring-1 ring-line">
+                      <li key={t} className="group flex items-center justify-between rounded-lg bg-surface px-2.5 py-1.5 text-sm font-medium text-ink ring-1 ring-line">
                         {t}
                         <button type="button" aria-label={`Remove ${t}`} className="text-muted opacity-0 hover:text-danger group-hover:opacity-100" onClick={() => update((s) => ({ ...s, queue: s.queue.filter((q) => !(q.day === i && q.time === t)) }))}>
                           <Icon name="close" size={14} />
