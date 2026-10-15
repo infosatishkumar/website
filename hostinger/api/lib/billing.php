@@ -27,7 +27,7 @@ function user_plan(?array $u): array
     if ($u && !empty($u['plan']) && isset(PLANS[$u['plan']]) && strtotime((string) $u['plan_until']) > time()) {
         return ['name' => $u['plan'], 'until' => $u['plan_until'], 'credits' => PLANS[$u['plan']]['credits']];
     }
-    return ['name' => 'Free', 'until' => null, 'credits' => (int) config()['agent_daily_limit']];
+    return ['name' => 'Free', 'until' => null, 'credits' => (int) config()['free_daily_credits']];
 }
 
 function upi_info(): array

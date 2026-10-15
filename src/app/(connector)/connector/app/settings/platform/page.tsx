@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import Icon from "@/components/connector/Icon";
 import SocialIcon, { type NetworkId } from "@/components/connector/SocialIcon";
 import { Card, PageHeader, PasswordInput } from "@/components/connector/app/ui";
 import { get, post } from "@/lib/connector/api";
+import { APP } from "@/lib/connector/data";
 import { initLive, reportError, useLive } from "@/lib/connector/store";
 
 type Values = Record<string, string>;
@@ -115,7 +118,31 @@ const providers: Provider[] = [
   },
 ];
 
-export default function PlatformSettings() {
+/** Connect button → the developer app it needs (so only that one is shown). */
+const providersFor: Record<string, string[]> = {
+  facebook: ["meta"],
+  instagram: ["meta"],
+  instagram_login: ["instagram"],
+  threads: ["threads"],
+  linkedin_profile: ["linkedin"],
+  linkedin_page: ["linkedin"],
+  x: ["x"],
+  youtube: ["google"],
+  google_business: ["google"],
+  pinterest: ["pinterest"],
+  tiktok: ["tiktok"],
+};
+
+export default function PlatformSettingsPage() {
+  return (
+    <Suspense>
+      <PlatformSettings />
+    </Suspense>
+  );
+}
+
+function PlatformSettings() {
+  const only = providersFor[useSearchParams().get("only") ?? ""];
   const { status } = useLive();
   const [data, setData] = useState<Settings | null>(null);
   const [form, setForm] = useState<Values>({});
@@ -176,57 +203,51 @@ export default function PlatformSettings() {
             <Copy label="Terms & data deletion" value={data.termsUrl} />
           </div>
           <div className="mt-5 divide-y divide-line rounded-xl border border-line">
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              <SocialIcon id="bluesky" size={30} rounded="full" />
-              <p className="flex-1 font-bold text-ink">Bluesky</p>
-              <span className="rounded-full bg-success-tint px-3 py-1 text-xs font-bold text-success">Ready — no keys needed</span>
-            </div>
-            {providers.map((p) => (
-              <ProviderRow key={p.id} p={p} ready={!!ready[p.readyKind]} form={form} onSaved={load} input={input} secrets={data.secrets} />
-            ))}
+            {!only && (
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <SocialIcon id="bluesky" size={30} rounded="full" />
+                <p className="flex-1 font-bold text-ink">Bluesky</p>
+                <span className="rounded-full bg-success-tint px-3 py-1 text-xs font-bold text-success">Ready — no keys needed</span>
+              </div>
+            )}
+            {providers
+              .filter((p) => !only || only.includes(p.id))
+              .map((p) => (
+                <ProviderRow key={p.id} p={p} ready={!!ready[p.readyKind]} form={form} onSaved={load} input={input} secrets={data.secrets} defaultOpen={!!only} />
+              ))}
           </div>
         </section>
 
-        <Section title="AI Agent (Claude)" icon="sparkles" ready={status.configured.anthropic} keys={["anthropic_api_key"]} form={form} onSaved={load}>
-          <Label
-            text="Claude API key"
-            hint={
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="font-bold text-primary">
-                console.anthropic.com → API Keys
-              </a>
-            }
+        {only ? (
+          <div className="flex flex-wrap gap-3">
+            <Link href={`${APP}/accounts/create`} className="btn btn-primary">
+              Back to Connect account
+            </Link>
+            <Link href={`${APP}/settings/platform`} className="btn btn-ghost border border-line">
+              Show all settings
+            </Link>
+          </div>
+        ) : (
+          <Section
+            title="Email (verification & password reset)"
+            icon="mail"
+            ready={status.configured.email}
+            keys={["smtp_host", "smtp_port", "smtp_user", "smtp_pass", "mail_from", "mail_from_name", "demo_notify_email"]}
+            form={form}
+            onSaved={load}
+            extra={<TestEmail />}
           >
-            {input("anthropic_api_key", true)}
-          </Label>
-        </Section>
-
-        <Section title="UPI payments" icon="dollar" ready={!!form.upi_id} keys={["upi_id", "upi_name"]} form={form} onSaved={load}>
-          <p className="mb-4 text-sm text-ink-2">Customers scan a QR with the plan amount filled in. Approve their payments in Profile menu → Payments.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Label text="UPI ID">{input("upi_id", false, "yourname@ybl")}</Label>
-            <Label text="Name shown in UPI apps">{input("upi_name", false, "SATISH KUMAR PRASAD")}</Label>
-          </div>
-        </Section>
-
-        <Section
-          title="Email (verification & password reset)"
-          icon="mail"
-          ready={status.configured.email}
-          keys={["smtp_host", "smtp_port", "smtp_user", "smtp_pass", "mail_from", "mail_from_name", "demo_notify_email"]}
-          form={form}
-          onSaved={load}
-          extra={<TestEmail />}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Label text="Mailbox (SMTP user)">{input("smtp_user", false, "contact@satishkumar.net")}</Label>
-            <Label text="Mailbox password">{input("smtp_pass", true)}</Label>
-            <Label text="SMTP server">{input("smtp_host", false, "smtp.hostinger.com")}</Label>
-            <Label text="Port" hint="465 (SSL) or 587 (TLS)">{input("smtp_port", false, "465")}</Label>
-            <Label text="From address">{input("mail_from", false, "Same as mailbox")}</Label>
-            <Label text="From name">{input("mail_from_name", false, "Social Media Connector")}</Label>
-            <Label text="Demo booking alerts go to">{input("demo_notify_email", false, "contact@satishkumar.net")}</Label>
-          </div>
-        </Section>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Label text="Mailbox (SMTP user)">{input("smtp_user", false, "contact@satishkumar.net")}</Label>
+              <Label text="Mailbox password">{input("smtp_pass", true)}</Label>
+              <Label text="SMTP server">{input("smtp_host", false, "smtp.hostinger.com")}</Label>
+              <Label text="Port" hint="465 (SSL) or 587 (TLS)">{input("smtp_port", false, "465")}</Label>
+              <Label text="From address">{input("mail_from", false, "Same as mailbox")}</Label>
+              <Label text="From name">{input("mail_from_name", false, "Social Media Connector")}</Label>
+              <Label text="Demo booking alerts go to">{input("demo_notify_email", false, "contact@satishkumar.net")}</Label>
+            </div>
+          </Section>
+        )}
       </div>
     </div>
   );
@@ -239,15 +260,17 @@ function ProviderRow({
   onSaved,
   input,
   secrets,
+  defaultOpen = false,
 }: {
   p: Provider;
+  defaultOpen?: boolean;
   ready: boolean;
   form: Values;
   onSaved: () => void;
   input: (k: string, secret: boolean) => ReactNode;
   secrets: string[];
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const save = useSave(p.fields.map((f) => f.key), form, onSaved);
   return (
     <div>

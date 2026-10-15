@@ -329,7 +329,7 @@ function ViaModal({ choice, onClose }: { choice: string; onClose: () => void }) 
             Proceed to Connect
           </a>
         ) : admin ? (
-          <Link href={`${APP}/settings/platform`} className="btn btn-primary">
+          <Link href={`${APP}/settings/platform/?only=${kind}`} className="btn btn-primary">
             Add app keys to enable
           </Link>
         ) : (

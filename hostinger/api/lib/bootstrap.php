@@ -43,6 +43,7 @@ function config(): array
                 'demo_timezone' => 'Asia/Kolkata',
                 'demo_hours' => ['10:00', '18:00'],
                 'demo_days' => [1, 2, 3, 4, 5, 6],
+                'free_daily_credits' => 5,
                 'upi_id' => 'infosatish.in2@ybl',
                 'upi_name' => 'SATISH KUMAR PRASAD',
             ];

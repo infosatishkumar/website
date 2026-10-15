@@ -245,7 +245,7 @@ export type Plan = {
 };
 
 export const socialPlans: Plan[] = [
-  { name: "Essentials", monthly: 1499, annual: 1199, blurb: "For solo marketers and creators.", limits: ["1 user", "7 social accounts", "500 scheduled posts"], features: ["Calendar & queue", "AI Pilot (50 credits)", "Basic analytics", "Bulk import"] },
+  { name: "Essentials", monthly: 1499, annual: 1199, blurb: "For solo marketers and creators.", limits: ["1 user", "7 social accounts", "500 scheduled posts"], features: ["Calendar & queue", "AI Agent (150 credits/day)", "Basic analytics", "Bulk import"] },
   { name: "Standard", monthly: 2999, annual: 2399, blurb: "For growing brands and small teams.", popular: true, limits: ["3 users", "20 social accounts", "Unlimited posts"], features: ["Everything in Essentials", "Content library", "Advanced reports", "Unified inbox", "Approvals"] },
   { name: "Premium", monthly: 4999, annual: 3999, blurb: "For agencies managing many clients.", limits: ["6 users", "50 social accounts", "Unlimited posts"], features: ["Everything in Standard", "Client management", "White-label reports", "Competitor analysis", "Priority support"] },
   { name: "Ultimate", monthly: 8999, annual: 7199, blurb: "For large agencies and enterprises.", limits: ["Unlimited users", "100 social accounts", "Unlimited posts"], features: ["Everything in Premium", "Full white label", "MCP Server access", "Dedicated manager", "SSO"] },

@@ -19,8 +19,8 @@ return [
     // Claude API key (console.anthropic.com → API Keys).
     'anthropic_api_key' => '',
     'anthropic_model' => 'claude-opus-5-5',
-    // AI messages per user per day (agent chats + AI Pilot captions).
-    'agent_daily_limit' => 50,
+    // AI credits per day on the Free plan (paid plans get more, see lib/billing.php).
+    'free_daily_credits' => 5,
 
     // Email for verification, password reset and demo bookings (Hostinger mailbox).
     'smtp_host' => 'smtp.hostinger.com',
