@@ -42,18 +42,10 @@ if (!$configFile) {
         $base = isset($cfg['base_url']) ? $cfg['base_url'] : '';
         if ($base === '' || strpos($base, 'yourdomain.com') !== false) {
             $problems[] = 'Set base_url in smc-config.php to https://' . $host;
-        } elseif ($host !== '' && parse_url($base, PHP_URL_HOST) !== $host) {
+        } elseif ($host !== '' && parse_url($base, PHP_URL_HOST) !== preg_replace('/:\d+$/', '', $host)) {
             $problems[] = 'base_url is ' . $base . ' but this site is ' . $host . '. Make them the same.';
         }
-        if (empty($cfg['smtp_user']) || empty($cfg['smtp_pass'])) {
-            $problems[] = 'smtp_user / smtp_pass are empty — sign-up verification and password reset emails cannot be sent. Use your Hostinger mailbox (e.g. contact@satishkumar.net) and its password.';
-        }
-        if (empty($cfg['anthropic_api_key'])) {
-            $problems[] = 'anthropic_api_key is empty — the AI Agent needs it (console.anthropic.com → API Keys).';
-        }
-        if (empty($cfg['meta_app_id']) || empty($cfg['meta_app_secret'])) {
-            $problems[] = 'meta_app_id / meta_app_secret are empty — Facebook & Instagram cannot connect until you add them.';
-        }
+        // Meta, Claude and email keys are added from the dashboard (Platform settings), not here.
         $dbDir = dirname(isset($cfg['db_path']) ? $cfg['db_path'] : $configFile);
         if (!is_writable($dbDir)) {
             $problems[] = 'The folder for the database is not writable: ' . $dbDir;

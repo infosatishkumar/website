@@ -7,6 +7,7 @@ require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/meta.php';
 require __DIR__ . '/lib/agent.php';
 require __DIR__ . '/lib/demo.php';
+require __DIR__ . '/lib/platform.php';
 
 $action = (string) ($_GET['action'] ?? '');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -85,7 +86,7 @@ try {
         case 'meta_connect':
             $cfg = config();
             if (empty($cfg['meta_app_id']) || empty($cfg['meta_app_secret'])) {
-                fail('Add meta_app_id and meta_app_secret to smc-config.php first.', 400);
+                fail('Facebook & Instagram connection is not set up yet. The site owner can add the Meta app in Settings → Platform settings.', 400);
             }
             $_SESSION['meta_state'] = bin2hex(random_bytes(16));
             $_SESSION['meta_kind'] = in_array($_GET['kind'] ?? '', ['facebook', 'instagram'], true) ? $_GET['kind'] : 'all';
@@ -212,6 +213,20 @@ try {
             session_write_close(); // don't block other tabs while the agent works
             json_out(agent_message(!empty($b['threadId']) ? (int) $b['threadId'] : null, $text, (array) ($b['images'] ?? [])));
 
+        /* ---------- platform settings (site owner) ---------- */
+        case 'platform_settings':
+            json_out(platform_settings());
+        case 'platform_settings_save':
+            if ($method !== 'POST') {
+                fail('POST required', 405);
+            }
+            json_out(platform_settings_save(body()));
+        case 'platform_test_email':
+            if ($method !== 'POST') {
+                fail('POST required', 405);
+            }
+            json_out(platform_test_email());
+
         case 'agent_settings':
             set_user_setting('autopublish', !empty(body()['autopublish']) ? '1' : '0');
             json_out(['autopublish' => user_setting('autopublish') === '1']);
@@ -238,7 +253,7 @@ try {
 } catch (Anthropic\Core\Exceptions\APIStatusException $e) {
     fail('Claude API error: ' . $e->getMessage(), 502);
 } catch (PHPMailer\PHPMailer\Exception $e) {
-    fail('Could not send email: ' . $e->getMessage() . ' — check smtp_user / smtp_pass in smc-config.php.', 502);
+    fail('Could not send email: ' . $e->getMessage() . ' — the site owner can check email settings in Settings → Platform settings.', 502);
 } catch (Throwable $e) {
     fail($e->getMessage(), 500);
 }

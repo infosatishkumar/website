@@ -206,6 +206,21 @@ function Agent() {
               <SetupProblems />
             </div>
           )}
+          {live && !status?.configured.anthropic && (
+            <p className="mx-auto mb-6 max-w-xl rounded-xl bg-warn-tint px-4 py-3 text-sm text-ink">
+              {status?.user?.isAdmin ? (
+                <>
+                  Add your Claude API key in{" "}
+                  <Link href={`${APP}/settings/platform`} className="font-bold text-primary">
+                    Platform settings
+                  </Link>{" "}
+                  to turn on the AI Agent.
+                </>
+              ) : (
+                "The AI Agent is being set up — please check back soon."
+              )}
+            </p>
+          )}
           {live && turns.length === 0 && (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <LogoMark size={56} />
@@ -262,6 +277,21 @@ function Agent() {
         </div>
 
         <div className="px-4 pb-4 sm:px-8">
+          {live && !status?.configured.anthropic && (
+            <p className="mx-auto mb-6 max-w-xl rounded-xl bg-warn-tint px-4 py-3 text-sm text-ink">
+              {status?.user?.isAdmin ? (
+                <>
+                  Add your Claude API key in{" "}
+                  <Link href={`${APP}/settings/platform`} className="font-bold text-primary">
+                    Platform settings
+                  </Link>{" "}
+                  to turn on the AI Agent.
+                </>
+              ) : (
+                "The AI Agent is being set up — please check back soon."
+              )}
+            </p>
+          )}
           {live && turns.length === 0 && (
             <ul className="mx-auto mb-3 max-w-3xl divide-y divide-line">
               {suggestions.map((s) => (

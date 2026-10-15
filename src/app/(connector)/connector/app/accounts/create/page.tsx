@@ -68,11 +68,12 @@ export default function ConnectAccount() {
           </span>
         }
       />
-      {(!live || !status?.configured.meta) && (
+      {!live && (
         <div className="mb-6">
           <SetupProblems compact />
         </div>
       )}
+      {live && !status?.configured.meta && <MetaNotReady admin={!!status?.user?.isAdmin} />}
 
       <div className="grid gap-x-5 gap-y-12 pt-8 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => {
@@ -145,7 +146,7 @@ export default function ConnectAccount() {
                 Proceed to connect
               </a>
             ) : (
-              <span className="text-sm font-bold text-danger">Add the Meta app ID and secret in smc-config.php first.</span>
+              <span className="text-sm font-bold text-ink-2">Facebook &amp; Instagram connection is being set up — please check back soon.</span>
             )}
           </div>
         </Modal>
@@ -192,5 +193,28 @@ export default function ConnectAccount() {
         </Modal>
       )}
     </>
+  );
+}
+
+function MetaNotReady({ admin }: { admin: boolean }) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warn-tint text-warn-ink">
+        <Icon name={admin ? "gear" : "clock"} size={22} />
+      </span>
+      <div className="flex-1">
+        <p className="font-bold text-ink">{admin ? "One-time setup: connect your Meta app" : "Facebook & Instagram are almost ready"}</p>
+        <p className="text-sm text-ink-2">
+          {admin
+            ? "Add your Meta App ID and Secret once in Platform settings. After that every user connects their Pages with just a Facebook login."
+            : "We are finishing the Facebook & Instagram connection. Please check back soon."}
+        </p>
+      </div>
+      {admin && (
+        <Link href={`${APP}/settings/platform`} className="btn btn-primary">
+          Open Platform settings
+        </Link>
+      )}
+    </div>
   );
 }

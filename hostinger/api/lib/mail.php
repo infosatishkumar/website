@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 use PHPMailer\PHPMailer\PHPMailer;
 
-/* Transactional email through the Hostinger mailbox in smc-config.php (SMTP). */
+/* Transactional email through the Hostinger mailbox (SMTP settings from Platform settings or smc-config.php). */
 
 function send_mail(string $to, string $subject, string $html, string $text): void
 {
     $cfg = config();
     if (empty($cfg['smtp_user']) || empty($cfg['smtp_pass'])) {
-        throw new RuntimeException('Email is not set up yet: add smtp_user and smtp_pass to smc-config.php.');
+        throw new RuntimeException('Email is not set up yet. The site owner can add it in Settings → Platform settings.');
     }
     $m = new PHPMailer(true);
     $m->isSMTP();

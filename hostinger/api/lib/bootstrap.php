@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
+/** Settings the site owner can change from the dashboard (stored in the database). */
+const PLATFORM_KEYS = [
+    'meta_app_id', 'meta_app_secret', 'meta_config_id',
+    'anthropic_api_key',
+    'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'mail_from', 'mail_from_name', 'demo_notify_email',
+];
+const PLATFORM_SECRETS = ['meta_app_secret', 'anthropic_api_key', 'smtp_pass'];
+
 /** Loads smc-config.php (one level above public_html, or public_html as a fallback). */
 function config(): array
 {
@@ -28,6 +36,17 @@ function config(): array
                 'demo_hours' => ['10:00', '18:00'],
                 'demo_days' => [1, 2, 3, 4, 5, 6],
             ];
+            // Keys the owner saved from Platform settings on the website win over the file.
+            try {
+                foreach (db()->query("SELECT k, v FROM settings WHERE k LIKE 'platform.%'") as $row) {
+                    $name = substr((string) $row['k'], 9);
+                    if (in_array($name, PLATFORM_KEYS, true) && $row['v'] !== '') {
+                        $cfg[$name] = $name === 'smtp_port' ? (int) $row['v'] : (string) $row['v'];
+                    }
+                }
+            } catch (Throwable) {
+                // database not ready yet: file values only
+            }
             return $cfg;
         }
     }
@@ -230,7 +249,24 @@ function uid(): int
 
 function user_public(array $u): array
 {
-    return ['id' => (string) $u['id'], 'name' => $u['name'], 'email' => $u['email']];
+    return ['id' => (string) $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'isAdmin' => is_admin($u)];
+}
+
+/** The site owner: admin_email in smc-config.php (comma-separated allowed), else the first user. */
+function is_admin(?array $u): bool
+{
+    if (!$u) {
+        return false;
+    }
+    $emails = array_filter(array_map(fn ($e) => strtolower(trim($e)), explode(',', (string) (config()['admin_email'] ?? ''))));
+    return $emails ? in_array(strtolower((string) $u['email']), $emails, true) : (int) $u['id'] === 1;
+}
+
+function require_admin(): void
+{
+    if (!is_admin(current_user())) {
+        fail('Only the site owner can change platform settings', 403);
+    }
 }
 
 /** Messages the AI may still send today (agent + AI captions share it). */

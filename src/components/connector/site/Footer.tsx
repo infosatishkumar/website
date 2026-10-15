@@ -53,7 +53,11 @@ export default function Footer() {
         </div>
         <div className="mt-14 flex flex-col justify-between gap-4 border-t border-white/10 pt-6 text-sm text-white/50 sm:flex-row">
           <p>© {new Date().getFullYear()} Social Media Connector. All rights reserved.</p>
-          <p>Prices are listed in INR and exclude GST.</p>
+          <p className="flex flex-wrap gap-4">
+            <Link href={`${BASE}/privacy`} className="hover:text-white">Privacy policy</Link>
+            <Link href={`${BASE}/terms`} className="hover:text-white">Terms &amp; data deletion</Link>
+            <span>Prices are listed in INR and exclude GST.</span>
+          </p>
         </div>
       </div>
     </footer>

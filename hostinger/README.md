@@ -19,7 +19,11 @@ bash hostinger/build.sh   # → hostinger/dist/social-media-connector-hostinger.
    "Show hidden files" on karke check karo ki `.htaccess` aa gayi hai.
 3. **SSL** on hona chahiye (hPanel → Security → SSL). Meta login ke liye `https` zaroori hai.
 
-## 3. Config file (sabse zaroori)
+## 3. Config file (sirf ek baar, chhota sa)
+
+> Meta App ID/Secret, Claude key aur email password ab **website se** daalte hain:
+> login karke left me **Settings → Platform settings**. Config file me sirf `base_url`,
+> `admin_email`, `admin_password` aur `cron_secret` kaafi hai.
 
 1. `smc-config.sample.php` ko `smc-config.php` naam se copy karo.
 2. Isko **public_html ke bahar**, ek folder upar rakho:
@@ -50,6 +54,10 @@ demo booking ke emails bhi isi se jate hain.
 4. Test: `https://aapkadomain.com/api/health.php` kholo — "SMTP" wali line green honi chahiye.
 
 ## 4. Meta (Facebook + Instagram) app
+
+Ye **sirf site owner ek baar** karta hai (jaise SocialPilot ka apna Meta app hota hai).
+Public users ko kuch nahi karna — wo bas **Connect Page** dabake apne Facebook se login karte hain.
+Platform settings page par saare URLs "Copy" button ke saath dikhte hain.
 
 1. developers.facebook.com → **My Apps → Create App** → use case
    "Other" → type **Business**.

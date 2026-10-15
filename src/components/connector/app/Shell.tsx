@@ -176,6 +176,16 @@ function Frame({ children }: { children: ReactNode }) {
             );
           })}
           <div className="mt-auto flex flex-col items-center gap-1 pt-3">
+            {status?.user?.isAdmin && (
+              <Link
+                href={`${APP}/settings/platform`}
+                className={`flex w-[72px] flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium hover:bg-surface-2 hover:text-ink ${
+                  norm(pathname).startsWith(`${APP}/settings`) ? "bg-surface-2 text-ink" : "text-muted"
+                }`}
+              >
+                <Icon name="gear" size={22} /> Settings
+              </Link>
+            )}
             <Link href={`${BASE}/help`} className="flex w-[72px] flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-ink">
               <Icon name="help" size={22} /> Help
             </Link>
@@ -325,7 +335,12 @@ function ProfileMenu() {
               AI credits today: <b className="text-ink">{status.credits}</b> / {status.creditsPerDay}
             </p>
           )}
-          <Link href={`${BASE}/plans`} className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
+          {user?.isAdmin && (
+            <Link href={`${APP}/settings/platform`} className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
+              <Icon name="gear" size={17} /> Platform settings
+            </Link>
+          )}
+          <Link href={`${BASE}/plans`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
             <Icon name="crown" size={17} /> Upgrade plan
           </Link>
           <Link href={BASE} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">

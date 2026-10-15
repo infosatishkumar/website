@@ -185,7 +185,7 @@ function claude_client(): Client
 {
     $key = (string) (config()['anthropic_api_key'] ?? '');
     if ($key === '') {
-        throw new RuntimeException('Add your Claude API key to smc-config.php to use AI features.');
+        throw new RuntimeException('AI features are not set up yet. The site owner can add the Claude API key in Settings → Platform settings.');
     }
     return new Client(apiKey: $key);
 }
