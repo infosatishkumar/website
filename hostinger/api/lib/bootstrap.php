@@ -7,7 +7,7 @@ require __DIR__ . '/../vendor/autoload.php';
 const PLATFORM_KEYS = [
     'meta_app_id', 'meta_app_secret', 'meta_config_id',
     'instagram_app_id', 'instagram_app_secret', 'threads_app_id', 'threads_app_secret',
-    'linkedin_client_id', 'linkedin_client_secret', 'x_client_id', 'x_client_secret',
+    'linkedin_client_id', 'linkedin_client_secret', 'linkedin_page_client_id', 'linkedin_page_client_secret', 'x_client_id', 'x_client_secret',
     'google_client_id', 'google_client_secret', 'pinterest_app_id', 'pinterest_app_secret',
     'tiktok_client_key', 'tiktok_client_secret',
     'anthropic_api_key',
@@ -15,7 +15,7 @@ const PLATFORM_KEYS = [
 ];
 const PLATFORM_SECRETS = [
     'meta_app_secret', 'anthropic_api_key', 'smtp_pass', 'instagram_app_secret', 'threads_app_secret',
-    'linkedin_client_secret', 'x_client_secret', 'google_client_secret', 'pinterest_app_secret', 'tiktok_client_secret',
+    'linkedin_client_secret', 'linkedin_page_client_secret', 'x_client_secret', 'google_client_secret', 'pinterest_app_secret', 'tiktok_client_secret',
 ];
 
 /** Loads smc-config.php (one level above public_html, or public_html as a fallback). */

@@ -242,7 +242,7 @@ function Agent() {
                   </span>
                 )}
                 <div className={`flex max-w-[85%] flex-col gap-2 ${t.role === "user" ? "items-end" : "items-start"}`}>
-                  {t.images && t.images.length > 0 && (
+                  {t.role === "user" && t.images && t.images.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {t.images.map((src) => (
                         <MediaThumb key={src} src={src} className="h-24 w-24 rounded-xl object-cover ring-1 ring-line" />
@@ -254,8 +254,25 @@ function Agent() {
                       t.role === "user" ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm bg-surface-2 text-ink"
                     }`}
                   >
-                    {t.text}
+                    {t.role === "assistant" ? <RichText text={t.text} /> : t.text}
                   </p>
+                  {t.role === "assistant" && t.images && t.images.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {t.images.map((src) => (
+                        <figure key={src} className="overflow-hidden rounded-2xl border border-line bg-surface">
+                          <a href={src} target="_blank" rel="noreferrer">
+                            <MediaThumb src={src} className="max-h-80 w-auto max-w-full object-contain" />
+                          </a>
+                          <figcaption className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted">
+                            AI image
+                            <a href={src} download className="inline-flex items-center gap-1 font-bold text-primary">
+                              <Icon name="download" size={14} /> Download
+                            </a>
+                          </figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  )}
                   {t.postIds?.map((id) => <AgentPostCard key={id} id={id} />)}
                 </div>
               </div>
@@ -487,5 +504,16 @@ function AgentPostCard({ id }: { id: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Shows **bold** from the agent's replies without pulling in a markdown library. */
+function RichText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        part.startsWith("**") && part.endsWith("**") && part.length > 4 ? <b key={i}>{part.slice(2, -2)}</b> : part,
+      )}
+    </>
   );
 }

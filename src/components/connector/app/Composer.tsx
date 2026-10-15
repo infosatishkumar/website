@@ -122,6 +122,7 @@ export default function Composer() {
   const [idea, setIdea] = useState("");
   const [tone, setTone] = useState<(typeof tones)[number]>("Friendly");
   const [drafts, setDrafts] = useState<string[]>([]);
+  const [imgOpen, setImgOpen] = useState(false);
   const [pilot, setPilot] = useState(false);
   const [pilotBusy, setPilotBusy] = useState(false);
   const [ideas] = useState(() => upcomingIdeas(Date.now()));
@@ -226,7 +227,26 @@ export default function Composer() {
         </Card>
 
         <div className="space-y-6">
-          <Card title="Media">
+          <Card
+            title="Media"
+            action={
+              live && (
+                <button type="button" onClick={() => setImgOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full bg-primary-tint px-3 py-1 text-xs font-bold text-accent">
+                  <Icon name="image" size={14} /> Create image with AI
+                </button>
+              )
+            }
+          >
+            {imgOpen && (
+              <ImageMaker
+                text={text}
+                photo={media.find((m) => !isVideo(m)) ?? ""}
+                onDone={(url) => {
+                  setMedia((m) => [url, ...m].slice(0, 10));
+                  setImgOpen(false);
+                }}
+              />
+            )}
             <div className="flex flex-wrap gap-3">
               {media.map((m, k) => (
                 <span key={k} className="group relative h-24 w-24 overflow-hidden rounded-xl ring-1 ring-line">
@@ -469,5 +489,59 @@ export default function Composer() {
         </div>
       )}
     </>
+  );
+}
+
+/** Claude designs a post graphic from a short description; the server draws it. */
+function ImageMaker({ text, photo, onDone }: { text: string; photo: string; onDone: (url: string) => void }) {
+  const [prompt, setPrompt] = useState(text.slice(0, 300));
+  const [size, setSize] = useState("square");
+  const [usePhoto, setUsePhoto] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="mb-4 rounded-xl border border-primary/30 bg-primary-soft p-4">
+      <p className="text-sm font-bold text-ink">Describe the image</p>
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        rows={3}
+        className="field mt-2"
+        placeholder="e.g. Diwali sale, 30% off PUF panels till 5 Nov, brand Metro Puf, website metropuf.com"
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <select value={size} onChange={(e) => setSize(e.target.value)} className="field w-auto">
+          <option value="square">Square 1:1 (feed)</option>
+          <option value="portrait">Portrait 4:5 (Instagram)</option>
+          <option value="story">Story 9:16 (Reels, Stories)</option>
+          <option value="landscape">Landscape (LinkedIn, X, Facebook)</option>
+        </select>
+        {photo && (
+          <label className="flex items-center gap-2 text-sm text-ink-2">
+            <input type="checkbox" checked={usePhoto} onChange={(e) => setUsePhoto(e.target.checked)} className="h-4 w-4 accent-[#673DE6]" />
+            Put text on my uploaded photo
+          </label>
+        )}
+        <button
+          type="button"
+          disabled={busy || !prompt.trim()}
+          className="btn btn-primary btn-sm ml-auto disabled:opacity-50"
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const r = await post<{ url: string; credits: number }>("ai_image", { prompt, size, background: usePhoto ? photo : "" });
+              setCreditsLocal(r.credits);
+              onDone(r.url);
+            } catch (e) {
+              reportError(e);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <Icon name="sparkles" size={16} /> {busy ? "Designing…" : "Create image"}
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-muted">Makes a designed graphic (text, colours, shapes) — uses 1 AI credit.</p>
+    </div>
   );
 }

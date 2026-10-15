@@ -6,6 +6,7 @@ require __DIR__ . '/lib/mail.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/meta.php';
 require __DIR__ . '/lib/networks.php';
+require __DIR__ . '/lib/images.php';
 require __DIR__ . '/lib/agent.php';
 require __DIR__ . '/lib/demo.php';
 require __DIR__ . '/lib/platform.php';
@@ -228,6 +229,11 @@ try {
                 fail('POST required', 405);
             }
             json_out(platform_test_email());
+
+        case 'ai_image':
+            $b = body();
+            $bg = (string) ($b['background'] ?? '');
+            json_out(ai_image((string) ($b['prompt'] ?? ''), (string) ($b['size'] ?? ''), is_own_upload($bg) ? $bg : ''));
 
         case 'agent_settings':
             set_user_setting('autopublish', !empty(body()['autopublish']) ? '1' : '0');

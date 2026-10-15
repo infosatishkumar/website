@@ -1,0 +1,3 @@
+DM Sans (c) The DM Sans Project Authors (https://github.com/googlefonts/dm-fonts)
+Licensed under the SIL Open Font License, Version 1.1 — https://openfontlicense.org
+Used by lib/images.php to draw AI post images.

@@ -57,10 +57,12 @@ const providers: Provider[] = [
     icons: ["linkedin"],
     readyKind: "linkedin_profile",
     portal: "https://www.linkedin.com/developers/apps",
-    hint: "Add “Sign In with LinkedIn using OpenID Connect” and “Share on LinkedIn”. Pages need the Community Management API.",
+    hint: "Profiles: add “Sign In with LinkedIn using OpenID Connect” + “Share on LinkedIn”. Company Pages need the Community Management API, which LinkedIn only allows on a separate app — put that app's keys in the Pages boxes.",
     fields: [
-      { key: "linkedin_client_id", label: "Client ID" },
-      { key: "linkedin_client_secret", label: "Client Secret" },
+      { key: "linkedin_client_id", label: "Client ID (profiles)" },
+      { key: "linkedin_client_secret", label: "Client Secret (profiles)" },
+      { key: "linkedin_page_client_id", label: "Client ID (Pages app)", optional: true },
+      { key: "linkedin_page_client_secret", label: "Client Secret (Pages app)", optional: true },
     ],
   },
   {

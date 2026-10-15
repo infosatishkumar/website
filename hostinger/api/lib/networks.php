@@ -15,7 +15,7 @@ const CONNECT_KINDS = [
     'instagram_login' => ['network' => 'instagram', 'provider' => 'instagram'],
     'threads' => ['network' => 'threads', 'provider' => 'threads'],
     'linkedin_profile' => ['network' => 'linkedin', 'provider' => 'linkedin'],
-    'linkedin_page' => ['network' => 'linkedin', 'provider' => 'linkedin'],
+    'linkedin_page' => ['network' => 'linkedin', 'provider' => 'linkedin_page'],
     'x' => ['network' => 'x', 'provider' => 'x'],
     'youtube' => ['network' => 'youtube', 'provider' => 'google'],
     'google_business' => ['network' => 'google', 'provider' => 'google'],
@@ -29,6 +29,7 @@ const PROVIDER_KEYS = [
     'instagram' => ['instagram_app_id', 'instagram_app_secret'],
     'threads' => ['threads_app_id', 'threads_app_secret'],
     'linkedin' => ['linkedin_client_id', 'linkedin_client_secret'],
+    'linkedin_page' => ['linkedin_page_client_id', 'linkedin_page_client_secret'],
     'x' => ['x_client_id', 'x_client_secret'],
     'google' => ['google_client_id', 'google_client_secret'],
     'pinterest' => ['pinterest_app_id', 'pinterest_app_secret'],
@@ -51,6 +52,16 @@ function provider_ready(string $provider): bool
     return isset(PROVIDER_KEYS[$provider]);
 }
 
+/** LinkedIn Pages can use their own app (Community Management API); otherwise the main LinkedIn app. */
+function linkedin_keys(bool $page): array
+{
+    $cfg = config();
+    if ($page && trim((string) ($cfg['linkedin_page_client_id'] ?? '')) !== '' && trim((string) ($cfg['linkedin_page_client_secret'] ?? '')) !== '') {
+        return [(string) $cfg['linkedin_page_client_id'], (string) $cfg['linkedin_page_client_secret']];
+    }
+    return [(string) ($cfg['linkedin_client_id'] ?? ''), (string) ($cfg['linkedin_client_secret'] ?? '')];
+}
+
 /** Which connect buttons work right now (Bluesky needs no developer app). */
 function connect_ready(): array
 {
@@ -58,6 +69,7 @@ function connect_ready(): array
     foreach (CONNECT_KINDS as $kind => $k) {
         $out[$kind] = provider_ready($k['provider']);
     }
+    $out['linkedin_page'] = $out['linkedin_page'] || provider_ready('linkedin');
     return $out;
 }
 
@@ -159,7 +171,7 @@ function oauth_start(string $kind): string
         throw new RuntimeException('Unknown network');
     }
     $provider = CONNECT_KINDS[$kind]['provider'];
-    if (!provider_ready($provider)) {
+    if (!(connect_ready()[$kind] ?? false)) {
         throw new RuntimeException('This network is not set up yet. The site owner can add its app keys in Settings → Platform settings.');
     }
     $cfg = config();
@@ -184,9 +196,10 @@ function oauth_start(string $kind): string
             ]);
             break;
         case 'linkedin':
+        case 'linkedin_page':
             $scope = $kind === 'linkedin_page' ? 'r_organization_admin w_organization_social' : 'openid profile w_member_social';
             $url = 'https://www.linkedin.com/oauth/v2/authorization?' . http_build_query([
-                'response_type' => 'code', 'client_id' => $cfg['linkedin_client_id'], 'redirect_uri' => $redirect, 'state' => $state, 'scope' => $scope,
+                'response_type' => 'code', 'client_id' => linkedin_keys($kind === 'linkedin_page')[0], 'redirect_uri' => $redirect, 'state' => $state, 'scope' => $scope,
             ]);
             break;
         case 'x':
@@ -253,6 +266,7 @@ function oauth_callback(array $q): string
             save_pending($kind, oauth_accounts($kind, $code, $entry));
         }
     } catch (Throwable $e) {
+        error_log("SMC connect error ($kind): " . $e->getMessage());
         return $back . '?error=' . rawurlencode($e->getMessage());
     }
     return base_url() . '/connector/app/accounts/select/';
@@ -301,21 +315,29 @@ function oauth_accounts(string $kind, string $code, array $entry): array
             break;
 
         case 'linkedin':
+        case 'linkedin_page':
+            [$liId, $liSecret] = linkedin_keys($kind === 'linkedin_page');
             $t = api('LinkedIn', 'POST', 'https://www.linkedin.com/oauth/v2/accessToken', ['form' => [
                 'grant_type' => 'authorization_code', 'code' => $code, 'redirect_uri' => $redirect,
-                'client_id' => $cfg['linkedin_client_id'], 'client_secret' => $cfg['linkedin_client_secret'],
+                'client_id' => $liId, 'client_secret' => $liSecret,
             ]])['data'];
             $token = $t['access_token'];
             $refresh = (string) ($t['refresh_token'] ?? '');
             $expires = time() + (int) ($t['expires_in'] ?? 5184000);
             if ($kind === 'linkedin_page') {
-                $acl = api('LinkedIn', 'GET', 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED&count=100',
+                $acl = api('LinkedIn', 'GET', 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED&count=100',
                     ['headers' => linkedin_headers($token)])['data'];
+                $seen = [];
                 foreach ($acl['elements'] ?? [] as $el) {
+                    // Admins and content admins may post as the Page.
+                    if (!in_array($el['role'] ?? '', ['ADMINISTRATOR', 'CONTENT_ADMINISTRATOR', 'CURATOR'], true) || isset($seen[$el['organization']])) {
+                        continue;
+                    }
+                    $seen[$el['organization']] = true;
                     $urn = (string) $el['organization'];
                     $orgId = substr($urn, strrpos($urn, ':') + 1);
                     $org = http_req('GET', "https://api.linkedin.com/rest/organizations/$orgId", ['headers' => linkedin_headers($token)])['data'] ?? [];
-                    $items[] = $item('linkedin', $urn, (string) ($org['localizedName'] ?? "Page $orgId"), (string) ($org['vanityName'] ?? ''), '', $token, $refresh, $expires);
+                    $items[] = $item('linkedin', $urn, (string) ($org['localizedName'] ?? "Page $orgId"), (string) ($org['vanityName'] ?? ''), '', $token, $refresh, $expires, ['app' => 'page']);
                 }
             } else {
                 $me = api('LinkedIn', 'GET', 'https://api.linkedin.com/v2/userinfo', ['headers' => bearer($token)])['data'];
@@ -468,8 +490,9 @@ function account_token(array &$account): string
             if ($refresh === '') {
                 throw new RuntimeException('LinkedIn: the login expired — reconnect this account.');
             }
+            [$liId, $liSecret] = linkedin_keys((account_meta($account)['app'] ?? '') === 'page');
             $new = api('LinkedIn', 'POST', 'https://www.linkedin.com/oauth/v2/accessToken', ['form' => [
-                'grant_type' => 'refresh_token', 'refresh_token' => $refresh, 'client_id' => $cfg['linkedin_client_id'], 'client_secret' => $cfg['linkedin_client_secret'],
+                'grant_type' => 'refresh_token', 'refresh_token' => $refresh, 'client_id' => $liId, 'client_secret' => $liSecret,
             ]])['data'];
             break;
         default:
@@ -620,7 +643,9 @@ function threads_publish(array $account, string $text, array $images, array $vid
 
 function linkedin_headers(string $token): array
 {
-    return array_merge(bearer($token), ['LinkedIn-Version: ' . (config()['linkedin_version'] ?? '202507'), 'X-Restli-Protocol-Version: 2.0.0']);
+    // LinkedIn retires API versions after ~1 year, so default to two months back from today.
+    $version = trim((string) (config()['linkedin_version'] ?? '')) ?: gmdate('Ym', strtotime('first day of -2 months'));
+    return array_merge(bearer($token), ['LinkedIn-Version: ' . $version, 'X-Restli-Protocol-Version: 2.0.0']);
 }
 
 function linkedin_publish(array $account, string $text, array $images): string

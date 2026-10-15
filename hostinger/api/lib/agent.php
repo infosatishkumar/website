@@ -28,12 +28,22 @@ function agent_tools(): array
                 'properties' => [
                     'account_ids' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Ids from list_accounts.'],
                     'text' => ['type' => 'string', 'description' => 'The caption, ready to post.'],
-                    'image_urls' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Public image URLs the owner uploaded in this chat.'],
+                    'image_urls' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Image or video URLs the owner uploaded in this chat, or URLs returned by create_image.'],
                     'when' => ['type' => 'string', 'enum' => ['now', 'schedule', 'draft'], 'description' => 'Publish now, schedule, or keep as draft.'],
                     'scheduled_at' => ['type' => 'string', 'description' => 'ISO-8601 time with timezone offset, required when when=schedule.'],
                 ],
                 'required' => ['account_ids', 'text', 'when'],
             ],
+        ],
+        [
+            'name' => 'create_image',
+            'description' => 'Design a post graphic (headline, colours, badge, button) and get back its image URL to use in create_post. '
+                . 'It is a text-and-colour graphic, not a photo. To put text on one of the owner\'s photos, pass that upload as background_url with style "photo".',
+            'inputSchema' => (function () {
+                $schema = image_spec_schema();
+                $schema['properties']['background_url'] = ['type' => 'string', 'description' => 'Optional: an image URL the owner attached, used as the background.'];
+                return $schema;
+            })(),
         ],
         [
             'name' => 'list_recent_posts',
@@ -53,8 +63,9 @@ function agent_system_prompt(): string
         . "- Reply in the language the owner writes in (Hindi, Hinglish or English).\n"
         . "- Write captions that fit each network: Instagram gets line breaks, emojis in moderation and 5–10 relevant hashtags; Facebook gets a shorter, conversational caption; X stays under 280 characters; Bluesky under 300; LinkedIn is professional.\n"
         . "- When the owner wants a post made, call list_accounts, then create_post. If networks need different captions, create one post per network.\n"
-        . "- Instagram, Pinterest and TikTok cannot post text alone and YouTube needs a video. If media is missing for those, ask the owner to attach it.\n"
-        . "- Only use image URLs the owner attached in this conversation.\n"
+        . "- Instagram, Pinterest and TikTok cannot post text alone and YouTube needs a video. If an image is missing, design one with create_image (or ask for a photo); for video, ask the owner to attach it.\n"
+        . "- When the owner asks for an image, banner, poster or creative, call create_image. Its graphics are text, colours and shapes — not photos — so say so if they want a real photo. Write image text in English or Hinglish (Latin script).\n"
+        . "- Only use media URLs the owner attached in this conversation or that create_image returned.\n"
         . ($auto
             ? "- Auto-publish is ON: create_post with when=now publishes immediately. Only publish when the owner clearly asked you to post or publish; otherwise use when=draft and show them the caption.\n"
             : "- Auto-publish is OFF: every post you create waits in Approvals for the owner. Tell them it is waiting for their approval.\n")
@@ -76,6 +87,18 @@ function agent_run_tool(string $name, array $input): string
         $q->execute([uid()]);
         $rows = $q->fetchAll();
         return json_encode($rows);
+    }
+    if ($name === 'create_image') {
+        $bg = (string) ($input['background_url'] ?? '');
+        if ($bg !== '' && is_own_upload($bg)) {
+            $input['background'] = $bg;
+            $input['style'] = 'photo';
+        } elseif (($input['style'] ?? '') === 'photo') {
+            $input['style'] = 'gradient';
+        }
+        $url = render_post_image($input);
+        $GLOBALS['agent_created_images'][] = $url;
+        return "Image created: $url";
     }
     if ($name === 'create_post') {
         $ids = array_values(array_filter(array_map('strval', (array) ($input['account_ids'] ?? []))));
@@ -215,6 +238,7 @@ function agent_message(?int $threadId, string $text, array $images): array
     $thread['transcript'][] = ['role' => 'user', 'text' => $text, 'images' => $images, 'at' => now_iso()];
 
     $GLOBALS['agent_created_posts'] = [];
+    $GLOBALS['agent_created_images'] = [];
     $reply = '';
     for ($step = 0; $step < AGENT_MAX_STEPS; $step++) {
         $response = $client->beta->messages->create(
@@ -255,7 +279,7 @@ function agent_message(?int $threadId, string $text, array $images): array
         $thread['history'][] = ['role' => 'user', 'content' => $results];
     }
 
-    $thread['transcript'][] = ['role' => 'assistant', 'text' => $reply !== '' ? $reply : 'Done.', 'postIds' => $GLOBALS['agent_created_posts'], 'at' => now_iso()];
+    $thread['transcript'][] = ['role' => 'assistant', 'text' => $reply !== '' ? $reply : 'Done.', 'postIds' => $GLOBALS['agent_created_posts'], 'images' => $GLOBALS['agent_created_images'], 'at' => now_iso()];
     agent_save_thread($thread);
     return ['threadId' => (string) $thread['id'], 'title' => $thread['title'], 'transcript' => $thread['transcript'], 'credits' => ai_credits_left()];
 }
