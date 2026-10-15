@@ -297,7 +297,7 @@ function scope_help(string $kind, string $raw): string
     }
     $fix = [
         'linkedin_profile' => 'LinkedIn Developers → your app → Products: add “Share on LinkedIn” and “Sign In with LinkedIn using OpenID Connect” (both are instant).',
-        'linkedin_page' => 'LinkedIn Developers → Products: request “Community Management API”. LinkedIn only allows it on a separate app with no other products, and approves it after review. Put that app’s keys in Platform settings → LinkedIn → Pages app.',
+        'linkedin_page' => 'LinkedIn Developers → Products: request “Community Management API”. LinkedIn only allows it on a separate app with no other products, and approves it after review. Once LinkedIn approves it, put that app’s keys in Platform settings → LinkedIn company pages.',
         'x' => 'X developer console → your app → User authentication settings: set permissions to “Read and write”.',
         'youtube' => 'Google Cloud → APIs & Services: enable “YouTube Data API v3” and add the YouTube scopes on the OAuth consent screen.',
         'google_business' => 'Google Cloud: enable the Business Profile APIs (access must be approved by Google).',

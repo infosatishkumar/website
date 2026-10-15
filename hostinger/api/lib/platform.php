@@ -65,6 +65,11 @@ function platform_settings_save(array $in): array
         }
     }
 
+    $liPage = $next['linkedin_page_client_id'] ?? '';
+    if ($liPage !== '' && strcasecmp($liPage, trim((string) ($cfg['linkedin_client_id'] ?? ''))) === 0) {
+        $warning = 'Saved, but this is the same LinkedIn app as your profiles app. Company Pages only work with a separate app that LinkedIn has approved for the “Community Management API”.';
+    }
+
     foreach ($next as $k => $v) {
         set_setting('platform.' . $k, $v);
     }
