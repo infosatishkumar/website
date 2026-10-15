@@ -245,6 +245,11 @@ function oauth_start(string $kind): string
     $all = array_filter((array) ($_SESSION['oauth'] ?? []), fn ($e) => ($e['t'] ?? 0) > time() - 1800);
     $all[$state] = $entry;
     $_SESSION['oauth'] = $all;
+    // Also keep it in the database, so a lost or rotated session cookie doesn't break the return trip.
+    $pdo = db();
+    $pdo->prepare('DELETE FROM oauth_states WHERE created_at < ?')->execute([time() - 1800]);
+    $pdo->prepare('INSERT OR REPLACE INTO oauth_states (state, user_id, data, created_at) VALUES (?, ?, ?, ?)')
+        ->execute([$state, uid(), json_encode($entry), time()]);
     return $url;
 }
 
@@ -255,10 +260,21 @@ function oauth_callback(array $q): string
     start_session();
     $state = (string) ($q['state'] ?? '');
     $entry = $_SESSION['oauth'][$state] ?? null;
+    $user = current_user();
+    if ($state !== '' && !$entry && $user) {
+        $s = db()->prepare('SELECT data FROM oauth_states WHERE state = ? AND user_id = ? AND created_at >= ?');
+        $s->execute([$state, $user['id'], time() - 1800]);
+        $entry = json_decode((string) $s->fetchColumn(), true) ?: null;
+    }
     if ($state === '' || !$entry) {
-        return $back . '?error=' . rawurlencode('Login expired, please try again.');
+        $why = trim(html_entity_decode((string) ($q['error_description'] ?? $q['error_message'] ?? ''), ENT_QUOTES | ENT_HTML5));
+        if (!$user) {
+            return base_url() . '/connector/app/?auth=expired';
+        }
+        return $back . '?error=' . rawurlencode($why !== '' ? $why : 'The login took too long or was opened in another browser. Please click Connect again.');
     }
     unset($_SESSION['oauth'][$state]);
+    db()->prepare('DELETE FROM oauth_states WHERE state = ?')->execute([$state]);
     $kind = (string) $entry['kind'];
     if (!empty($q['error']) || empty($q['code'])) {
         $why = html_entity_decode((string) ($q['error_description'] ?? $q['error_message'] ?? $q['error'] ?? 'Connection cancelled'), ENT_QUOTES | ENT_HTML5);
