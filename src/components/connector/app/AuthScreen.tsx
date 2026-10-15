@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import Icon from "../Icon";
 import { LogoMark } from "../Logo";
+import { PasswordInput } from "./ui";
 import { ApiError } from "@/lib/connector/api";
 import { APP, BASE } from "@/lib/connector/data";
 import { forgotPassword, login, resendVerification, resetPassword, signup, useLive } from "@/lib/connector/store";
@@ -93,7 +94,7 @@ export default function AuthScreen() {
         <div className="relative">
           <h2 className="text-4xl font-bold leading-tight">Plan, publish and grow every channel — with an AI agent at your side.</h2>
           <ul className="mt-8 space-y-3 text-white/80">
-            {["Facebook & Instagram publishing", "AI Agent that writes and schedules posts", "Calendar, approvals and analytics"].map((t) => (
+            {["Publish to Facebook, Instagram, LinkedIn, X, YouTube, TikTok + more", "AI Agent that writes and schedules posts", "Calendar, approvals and analytics"].map((t) => (
               <li key={t} className="flex items-center gap-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
                   <Icon name="check" size={14} strokeWidth={2.6} />
@@ -161,7 +162,7 @@ export default function AuthScreen() {
               <form className="mt-6 space-y-4" onSubmit={submit}>
                 {mode === "signup" && (
                   <Field label="Full name">
-                    <input required autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Your name" />
+                    <input required aria-label="Full name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Your name" />
                   </Field>
                 )}
                 {mode !== "reset" && (
@@ -169,6 +170,7 @@ export default function AuthScreen() {
                     <input
                       required
                       type="email"
+                      aria-label="Email"
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -188,14 +190,13 @@ export default function AuthScreen() {
                       )
                     }
                   >
-                    <input
+                    <PasswordInput
                       required
-                      type="password"
+                      aria-label={mode === "reset" ? "New password" : "Password"}
                       minLength={mode === "login" ? 1 : 8}
                       autoComplete={mode === "login" ? "current-password" : "new-password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="field"
                       placeholder={mode === "login" ? "Your password" : "At least 8 characters"}
                     />
                   </Field>
@@ -260,15 +261,16 @@ export default function AuthScreen() {
   );
 }
 
+/** Not a <label>: it holds buttons (forgot password, show password) that a label would re-trigger. */
 function Field({ label, extra, children }: { label: string; extra?: ReactNode; children: ReactNode }) {
   return (
-    <label className="block text-sm font-medium text-ink">
+    <div className="block text-sm font-medium text-ink">
       <span className="mb-1.5 flex items-center justify-between">
         {label}
         {extra}
       </span>
       {children}
-    </label>
+    </div>
   );
 }
 

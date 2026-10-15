@@ -7,7 +7,7 @@ import Icon from "@/components/connector/Icon";
 import { LogoMark } from "@/components/connector/Logo";
 import SocialIcon from "@/components/connector/SocialIcon";
 import { SetupProblems } from "@/components/connector/app/SetupCheck";
-import { Modal, StatusBadge, Toggle } from "@/components/connector/app/ui";
+import { MediaThumb, Modal, StatusBadge, Toggle } from "@/components/connector/app/ui";
 import { get, post, uploadImage } from "@/lib/connector/api";
 import { APP } from "@/lib/connector/data";
 import {
@@ -245,8 +245,7 @@ function Agent() {
                   {t.images && t.images.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {t.images.map((src) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={src} src={src} alt="" className="h-24 w-24 rounded-xl object-cover ring-1 ring-line" />
+                        <MediaThumb key={src} src={src} className="h-24 w-24 rounded-xl object-cover ring-1 ring-line" />
                       ))}
                     </div>
                   )}
@@ -314,8 +313,7 @@ function Agent() {
               <div className="mb-2 flex flex-wrap gap-2">
                 {images.map((src) => (
                   <span key={src} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                    <MediaThumb src={src} className="h-14 w-14 rounded-lg object-cover" />
                     <button
                       type="button"
                       onClick={() => setImages(images.filter((x) => x !== src))}
@@ -356,7 +354,7 @@ function Agent() {
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
                 multiple
                 hidden
                 onChange={async (e) => {
@@ -463,8 +461,7 @@ function AgentPostCard({ id }: { id: string }) {
       {p.media.length > 0 && (
         <div className="mt-2 flex gap-2">
           {p.media.map((m) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={m} src={m} alt="" className="h-16 w-16 rounded-lg object-cover" />
+            <MediaThumb key={m} src={m} className="h-16 w-16 rounded-lg object-cover" />
           ))}
         </div>
       )}

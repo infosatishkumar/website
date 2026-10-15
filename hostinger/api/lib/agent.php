@@ -21,7 +21,7 @@ function agent_tools(): array
         [
             'name' => 'create_post',
             'description' => 'Create a social media post for one or more connected accounts. '
-                . 'Instagram accounts require at least one image URL. '
+                . 'Instagram, Pinterest and TikTok need at least one image or video URL; YouTube needs a video. '
                 . 'If auto-publish is off, the post is saved as "pending" for the owner to approve, whatever "when" says.',
             'inputSchema' => [
                 'type' => 'object',
@@ -48,12 +48,12 @@ function agent_system_prompt(): string
     $auto = user_setting('autopublish', '0') === '1';
     $name = current_user()['name'] ?? 'there';
     return "You are the AI Agent inside Social Media Connector, a social media management dashboard. "
-        . "You are talking to $name. You help them plan, write and publish posts to their connected Facebook Pages and Instagram Business accounts.\n\n"
+        . "You are talking to $name. You help them plan, write and publish posts to their connected social accounts (Facebook, Instagram, LinkedIn, X, Threads, Pinterest, TikTok, YouTube, Google Business, Bluesky).\n\n"
         . "How to work:\n"
         . "- Reply in the language the owner writes in (Hindi, Hinglish or English).\n"
-        . "- Write captions that fit each network: Instagram gets line breaks, emojis in moderation and 5–10 relevant hashtags; Facebook gets a shorter, conversational caption.\n"
+        . "- Write captions that fit each network: Instagram gets line breaks, emojis in moderation and 5–10 relevant hashtags; Facebook gets a shorter, conversational caption; X stays under 280 characters; Bluesky under 300; LinkedIn is professional.\n"
         . "- When the owner wants a post made, call list_accounts, then create_post. If networks need different captions, create one post per network.\n"
-        . "- Instagram cannot post text alone. If the owner wants Instagram but attached no image, ask them to attach one.\n"
+        . "- Instagram, Pinterest and TikTok cannot post text alone and YouTube needs a video. If media is missing for those, ask the owner to attach it.\n"
         . "- Only use image URLs the owner attached in this conversation.\n"
         . ($auto
             ? "- Auto-publish is ON: create_post with when=now publishes immediately. Only publish when the owner clearly asked you to post or publish; otherwise use when=draft and show them the caption.\n"
@@ -69,7 +69,7 @@ function agent_run_tool(string $name, array $input): string
         $q = $pdo->prepare('SELECT id, network, name, handle FROM accounts WHERE user_id = ? ORDER BY id');
         $q->execute([uid()]);
         $rows = $q->fetchAll();
-        return $rows ? json_encode($rows) : 'No accounts are connected yet. Ask the owner to connect Facebook & Instagram on the Accounts page.';
+        return $rows ? json_encode($rows) : 'No accounts are connected yet. Ask the owner to connect an account on the Accounts page.';
     }
     if ($name === 'list_recent_posts') {
         $q = $pdo->prepare('SELECT id, text, account_ids, status, scheduled_at, result FROM posts WHERE user_id = ? ORDER BY id DESC LIMIT 15');
@@ -92,8 +92,8 @@ function agent_run_tool(string $name, array $input): string
             if (!isset($known[$id])) {
                 return "Error: account $id does not exist. Call list_accounts.";
             }
-            if ($known[$id] === 'instagram' && !$media) {
-                return 'Error: Instagram needs an image. Ask the owner to attach one.';
+            if (in_array($known[$id], ['instagram', 'pinterest', 'tiktok', 'youtube'], true) && !$media) {
+                return 'Error: ' . ucfirst($known[$id]) . ' needs an image or video. Ask the owner to attach one.';
             }
         }
         $at = now_iso();
@@ -265,7 +265,7 @@ function ai_captions(string $idea, string $tone, array $networks): array
 {
     $client = claude_client();
     use_ai_credit();
-    $nets = $networks ? implode(', ', array_map('strval', $networks)) : 'Facebook and Instagram';
+    $nets = $networks ? implode(', ', array_map('strval', $networks)) : 'Facebook, Instagram, LinkedIn and X';
     $response = $client->beta->messages->create(
         model: config()['anthropic_model'],
         maxTokens: 4000,

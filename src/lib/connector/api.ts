@@ -40,7 +40,7 @@ export type BackendStatus = {
   loggedIn: boolean;
   user: User | null;
   signupOpen: boolean;
-  configured: { anthropic: boolean; meta: boolean; email: boolean };
+  configured: { anthropic: boolean; meta: boolean; email: boolean; connect?: Record<string, boolean> };
   autopublish: boolean;
   credits: number;
   creditsPerDay: number;
@@ -53,7 +53,8 @@ export async function uploadImage(file: File): Promise<string> {
   return url;
 }
 
-export const metaConnectUrl = (kind: "facebook" | "instagram") => `${BASE}meta_connect&kind=${kind}`;
+/** Starts the network's own login (Facebook, LinkedIn, X, Google…). */
+export const connectUrl = (kind: string) => `${BASE}oauth_start&kind=${kind}`;
 
 export type Health = { ok: boolean; problems: string[]; info: { php: string; config_expected_at?: string } };
 

@@ -88,7 +88,7 @@ export default function Home() {
             </span>
             <div className="flex-1">
               <p className="font-bold text-ink">Connect your first social account</p>
-              <p className="text-sm text-ink-2">Link a Facebook Page or Instagram Business account to start publishing.</p>
+              <p className="text-sm text-ink-2">Link Facebook, Instagram, LinkedIn, X, YouTube, TikTok and more to start publishing.</p>
             </div>
             <Link href={`${APP}/accounts/create`} className="btn btn-primary">Connect account</Link>
           </div>
@@ -117,7 +117,7 @@ export default function Home() {
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-accent">
               <Icon name="plus" size={20} />
             </span>
-            <p className="flex-1 text-sm text-ink">Connect more Pages and Instagram accounts and manage everything in one place.</p>
+            <p className="flex-1 text-sm text-ink">Connect more pages, profiles and channels and manage everything in one place.</p>
             <Link href={`${APP}/accounts/create`} className="btn btn-primary btn-sm">Connect</Link>
           </div>
         )}

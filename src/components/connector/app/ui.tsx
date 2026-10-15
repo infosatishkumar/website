@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import Icon from "../Icon";
 import SocialIcon from "../SocialIcon";
 import type { Account } from "@/lib/connector/store";
@@ -155,4 +155,30 @@ export function DemoNote({ children }: { children: ReactNode }) {
       <span>{children}</span>
     </p>
   );
+}
+
+/** Password box with a show / hide eye button. */
+export function PasswordInput({ className = "", ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative block">
+      <input {...props} type={show ? "text" : "password"} className={`field pr-11 ${className}`} />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted hover:bg-surface-2 hover:text-ink"
+        aria-label={show ? "Hide password" : "Show password"}
+        title={show ? "Hide password" : "Show password"}
+      >
+        <Icon name={show ? "eyeOff" : "eye"} size={18} />
+      </button>
+    </span>
+  );
+}
+
+/** Image or video thumbnail for uploaded media. */
+export function MediaThumb({ src, className = "" }: { src: string; className?: string }) {
+  if (/\.(mp4|mov|m4v|webm)(\?|$)/i.test(src)) return <video src={src} muted playsInline className={`bg-night ${className}`} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" className={className} />;
 }

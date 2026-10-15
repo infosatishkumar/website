@@ -48,7 +48,7 @@ function graph(string $method, string $path, array $params = []): array
 
 function meta_redirect_uri(): string
 {
-    return rtrim(config()['base_url'], '/') . '/api/index.php?action=meta_callback';
+    return oauth_redirect_uri();
 }
 
 function meta_login_url(string $state): string
@@ -128,7 +128,7 @@ function meta_pending(): array
     $have = array_flip($connected->fetchAll(PDO::FETCH_COLUMN));
     $items = array_map(fn ($i) => [
         'key' => $i['key'], 'network' => $i['network'], 'name' => $i['name'], 'handle' => $i['handle'],
-        'picture' => $i['picture'], 'via' => $i['via'] ?? '', 'connected' => isset($have[$i['key']]),
+        'picture' => $i['picture'], 'via' => $i['via'] ?? ($i['meta']['via'] ?? ''), 'connected' => isset($have[$i['key']]),
     ], json_decode($row['data'], true) ?: []);
     return ['kind' => $row['kind'], 'items' => $items];
 }
@@ -140,13 +140,15 @@ function meta_connect_selected(array $keys): int
     $s->execute([uid()]);
     $items = json_decode((string) $s->fetchColumn(), true) ?: [];
     $want = array_flip(array_map('strval', $keys));
-    $upsert = db()->prepare('INSERT INTO accounts (user_id, network, external_id, name, handle, access_token, connected_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(network, external_id) DO UPDATE SET user_id = excluded.user_id, name = excluded.name, handle = excluded.handle, access_token = excluded.access_token');
+    $upsert = db()->prepare('INSERT INTO accounts (user_id, network, external_id, name, handle, access_token, refresh_token, expires_at, meta, connected_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(network, external_id) DO UPDATE SET user_id = excluded.user_id, name = excluded.name, handle = excluded.handle,
+            access_token = excluded.access_token, refresh_token = excluded.refresh_token, expires_at = excluded.expires_at, meta = excluded.meta');
     $n = 0;
     foreach ($items as $i) {
         if (isset($want[$i['key']])) {
-            $upsert->execute([uid(), $i['network'], $i['external_id'], $i['name'], $i['handle'], $i['token'], now_iso()]);
+            $upsert->execute([uid(), $i['network'], $i['external_id'], $i['name'], $i['handle'], $i['token'],
+                (string) ($i['refresh'] ?? ''), (int) ($i['expires'] ?? 0), json_encode($i['meta'] ?? new stdClass()), now_iso()]);
             $n++;
         }
     }
@@ -159,7 +161,15 @@ function meta_publish(array $account, string $text, array $media): string
     $token = $account['access_token'];
     $id = $account['external_id'];
 
+    $videos = array_values(array_filter($media, 'is_video_url'));
+    $images = array_values(array_filter($media, fn ($m) => !is_video_url($m)));
+
     if ($account['network'] === 'facebook') {
+        if ($videos) {
+            $r = graph('POST', "$id/videos", ['file_url' => $videos[0], 'description' => $text, 'access_token' => $token]);
+            return (string) ($r['id'] ?? 'ok');
+        }
+        $media = $images;
         if (count($media) === 0) {
             return graph('POST', "$id/feed", ['message' => $text, 'access_token' => $token])['id'];
         }
@@ -180,35 +190,7 @@ function meta_publish(array $account, string $text, array $media): string
     }
 
     if ($account['network'] === 'instagram') {
-        if (count($media) === 0) {
-            throw new RuntimeException('Instagram needs at least one image.');
-        }
-        if (count($media) === 1) {
-            $container = graph('POST', "$id/media", ['image_url' => $media[0], 'caption' => $text, 'access_token' => $token]);
-        } else {
-            $children = [];
-            foreach (array_slice($media, 0, 10) as $url) {
-                $children[] = graph('POST', "$id/media", ['image_url' => $url, 'is_carousel_item' => 'true', 'access_token' => $token])['id'];
-            }
-            $container = graph('POST', "$id/media", [
-                'media_type' => 'CAROUSEL',
-                'children' => implode(',', $children),
-                'caption' => $text,
-                'access_token' => $token,
-            ]);
-        }
-        // Wait until Instagram has processed the media (usually instant for images).
-        for ($i = 0; $i < 10; $i++) {
-            $s = graph('GET', $container['id'], ['fields' => 'status_code', 'access_token' => $token]);
-            if (($s['status_code'] ?? 'FINISHED') === 'FINISHED') {
-                break;
-            }
-            if (($s['status_code'] ?? '') === 'ERROR') {
-                throw new RuntimeException('Instagram could not process the image.');
-            }
-            sleep(2);
-        }
-        return graph('POST', "$id/media_publish", ['creation_id' => $container['id'], 'access_token' => $token])['id'];
+        return container_publish('Instagram', 'https://graph.facebook.com/' . config()['graph_version'], $id, $token, $images, $videos, $text, 'caption', 'media_publish');
     }
 
     throw new RuntimeException('Publishing to ' . $account['network'] . ' is not supported yet.');
@@ -241,7 +223,7 @@ function publish_post(int $postId): array
             continue;
         }
         try {
-            $results[$aid] = ['ok' => true, 'id' => meta_publish($account, $post['text'], $media)];
+            $results[$aid] = ['ok' => true, 'id' => network_publish($account, $post['text'], $media)];
             $ok++;
         } catch (Throwable $e) {
             $results[$aid] = ['ok' => false, 'error' => $e->getMessage()];

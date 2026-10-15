@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/meta.php';
+require __DIR__ . '/lib/networks.php';
 
 if (PHP_SAPI !== 'cli') {
     $secret = (string) (config()['cron_secret'] ?? '');

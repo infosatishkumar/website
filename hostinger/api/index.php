@@ -5,6 +5,7 @@ require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/mail.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/meta.php';
+require __DIR__ . '/lib/networks.php';
 require __DIR__ . '/lib/agent.php';
 require __DIR__ . '/lib/demo.php';
 require __DIR__ . '/lib/platform.php';
@@ -25,7 +26,7 @@ if ($method === 'POST' && ($_SERVER['HTTP_X_SMC'] ?? '') !== '1') {
 
 $public = ['status', 'signup', 'resend', 'verify', 'login', 'forgot', 'reset', 'demo_slots', 'demo_book'];
 if (!in_array($action, $public, true) && !current_user()) {
-    if ($action === 'meta_callback') {
+    if ($action === 'meta_callback' || $action === 'oauth_callback' || $action === 'oauth_start') {
         header('Location: ' . app_url('auth=expired'));
         exit;
     }
@@ -48,6 +49,7 @@ try {
                 'configured' => [
                     'anthropic' => !empty($cfg['anthropic_api_key']),
                     'meta' => !empty($cfg['meta_app_id']) && !empty($cfg['meta_app_secret']),
+                    'connect' => connect_ready(),
                     'email' => !empty($cfg['smtp_user']) && !empty($cfg['smtp_pass']),
                 ],
                 'autopublish' => $u ? user_setting('autopublish', '0') === '1' : false,
@@ -84,33 +86,22 @@ try {
             json_out(['ok' => true]);
 
         case 'meta_connect':
-            $cfg = config();
-            if (empty($cfg['meta_app_id']) || empty($cfg['meta_app_secret'])) {
-                fail('Facebook & Instagram connection is not set up yet. The site owner can add the Meta app in Settings → Platform settings.', 400);
+        case 'oauth_start':
+            try {
+                header('Location: ' . oauth_start((string) ($_GET['kind'] ?? 'facebook')));
+            } catch (Throwable $e) {
+                header('Location: ' . base_url() . '/connector/app/accounts/create/?error=' . rawurlencode($e->getMessage()));
             }
-            $_SESSION['meta_state'] = bin2hex(random_bytes(16));
-            $_SESSION['meta_kind'] = in_array($_GET['kind'] ?? '', ['facebook', 'instagram'], true) ? $_GET['kind'] : 'all';
-            header('Location: ' . meta_login_url($_SESSION['meta_state']));
             exit;
 
         case 'meta_callback':
-            $back = base_url() . '/connector/app/accounts/';
-            if (empty($_GET['state']) || !hash_equals((string) ($_SESSION['meta_state'] ?? ''), (string) $_GET['state'])) {
-                header('Location: ' . $back . '?error=' . rawurlencode('Login expired, please try again.'));
-                exit;
-            }
-            unset($_SESSION['meta_state']);
-            if (!empty($_GET['error'])) {
-                header('Location: ' . $back . '?error=' . rawurlencode((string) ($_GET['error_description'] ?? 'Connection cancelled')));
-                exit;
-            }
-            try {
-                meta_handle_callback((string) ($_GET['code'] ?? ''), (string) ($_SESSION['meta_kind'] ?? 'all'));
-                header('Location: ' . base_url() . '/connector/app/accounts/select/');
-            } catch (Throwable $e) {
-                header('Location: ' . $back . '?error=' . rawurlencode($e->getMessage()));
-            }
+        case 'oauth_callback':
+            header('Location: ' . oauth_callback($_GET));
             exit;
+
+        case 'bluesky_connect':
+            $b = body();
+            json_out(bluesky_connect((string) ($b['handle'] ?? ''), (string) ($b['password'] ?? '')));
 
         case 'meta_pending':
             json_out(meta_pending());
@@ -170,16 +161,27 @@ try {
         case 'upload':
             uid();
             $f = $_FILES['file'] ?? null;
+            if ($f && in_array($f['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+                fail('This file is bigger than the server allows. In hPanel → PHP Configuration raise upload_max_filesize and post_max_size to 256M.');
+            }
             if (!$f || $f['error'] !== UPLOAD_ERR_OK) {
                 fail('Upload failed');
             }
-            if ($f['size'] > 8 * 1024 * 1024) {
-                fail('Image must be under 8 MB');
-            }
             $info = @getimagesize($f['tmp_name']);
             $ext = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp', IMAGETYPE_GIF => 'gif'][$info[2] ?? 0] ?? null;
+            if ($ext && $f['size'] > 8 * 1024 * 1024) {
+                fail('Images must be under 8 MB');
+            }
             if (!$ext) {
-                fail('Only JPG, PNG, WEBP or GIF images');
+                // Videos for YouTube, TikTok, Reels and Threads.
+                $mime = (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
+                $ext = ['video/mp4' => 'mp4', 'video/quicktime' => 'mov', 'video/x-m4v' => 'm4v', 'video/webm' => 'webm'][$mime] ?? null;
+                if (!$ext) {
+                    fail('Only JPG, PNG, WEBP, GIF images or MP4, MOV, WEBM videos');
+                }
+                if ($f['size'] > 200 * 1024 * 1024) {
+                    fail('Videos must be under 200 MB');
+                }
             }
             $dir = dirname(__DIR__) . '/uploads';
             if (!is_dir($dir)) {
@@ -187,7 +189,7 @@ try {
             }
             $name = gmdate('Ymd') . '-' . bin2hex(random_bytes(8)) . '.' . $ext;
             if (!move_uploaded_file($f['tmp_name'], "$dir/$name")) {
-                fail('Could not save the image', 500);
+                fail('Could not save the file', 500);
             }
             json_out(['url' => base_url() . '/uploads/' . $name]);
 

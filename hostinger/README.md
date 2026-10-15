@@ -62,7 +62,7 @@ Platform settings page par saare URLs "Copy" button ke saath dikhte hain.
 1. developers.facebook.com → **My Apps → Create App** → use case
    "Other" → type **Business**.
 2. **Facebook Login for Business** product add karo.
-   - Valid OAuth Redirect URI: `https://aapkadomain.com/api/index.php?action=meta_callback`
+   - Valid OAuth Redirect URI: `https://aapkadomain.com/api/oauth.php`
 3. **App settings → Basic** se App ID aur App Secret copy karke config me daalo.
    Privacy Policy URL aur app icon bhi bharo.
 4. Instagram account **Business/Creator** hona chahiye aur kisi Facebook Page se linked.
@@ -70,6 +70,18 @@ Platform settings page par saare URLs "Copy" button ke saath dikhte hain.
    apne accounts ke liye itna kaafi hai. Doosre logon ke accounts ke liye **App Review** me ye
    permissions maango: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
    `business_management`, `instagram_basic`, `instagram_content_publish`.
+
+## 4a. Baaki networks (LinkedIn, X, YouTube, Google Business, Pinterest, TikTok, Threads, Instagram direct)
+
+Har network ka apna developer app hota hai (ek baar, sirf owner). **Settings → Platform settings**
+me har network ki row kholo → "Open developer portal" → app banao → Client ID / Secret wahan paste karo.
+Sab apps me **ek hi Callback URL**: `https://aapkadomain.com/api/oauth.php`
+
+- **Bluesky**: koi app nahi chahiye — user apna handle + app password daalke turant connect.
+- **YouTube** ke liye post me MP4 video chahiye; **Pinterest** ko image; **TikTok** ko photo/video.
+- Videos 200 MB tak: hPanel → PHP Configuration me `upload_max_filesize` aur `post_max_size` = 256M.
+- Har network public users ke liye kholne se pehle apna review/approval maangta hai
+  (Meta App Review, LinkedIn Community Management, TikTok audit, Google verification).
 
 ## 5. Cron (scheduled posts ke liye)
 
@@ -98,4 +110,4 @@ hPanel → **Advanced → Cron Jobs** → har 5 minute:
 
 | Live (asli) | Abhi sample/demo |
 |---|---|
-| Sign up + email verification, password reset, demo booking, Login, AI Agent, AI Pilot, Facebook Page + Instagram posting, scheduling, calendar, approvals, bulk import, image upload | Analytics, reports, competitor, inbox (sample numbers); X/LinkedIn/TikTok/YouTube connect ("Coming soon") |
+| Sign up + email verification, password reset, demo booking, Login, AI Agent, AI Pilot, Facebook, Instagram, LinkedIn, X, YouTube, Google Business, Pinterest, TikTok, Threads, Bluesky posting, scheduling, calendar, approvals, bulk import, image upload | Analytics, reports, competitor, inbox (sample numbers) |

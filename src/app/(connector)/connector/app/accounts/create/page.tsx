@@ -1,61 +1,210 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import Icon from "@/components/connector/Icon";
 import SocialIcon, { networkMeta, type NetworkId } from "@/components/connector/SocialIcon";
 import { SetupProblems } from "@/components/connector/app/SetupCheck";
-import { Modal, PageHeader } from "@/components/connector/app/ui";
-import { metaConnectUrl } from "@/lib/connector/api";
+import { Modal, PageHeader, PasswordInput } from "@/components/connector/app/ui";
+import { connectUrl, post } from "@/lib/connector/api";
 import { APP, BASE } from "@/lib/connector/data";
-import { uid, update, useLive, useWorkspace } from "@/lib/connector/store";
+import { reportError, uid, update, useLive, useWorkspace } from "@/lib/connector/store";
 
-type Option = { label: string; kind?: "facebook" | "instagram" };
-type Tile = { id: NetworkId; options: Option[] };
+type Button = { label: string; choice: string };
+type Tile = { id: NetworkId; buttons: Button[] };
 
-/** Networks in SocialPilot order; Meta ones connect for real, the rest are on the roadmap. */
+/** Networks in SocialPilot order; each button opens its "Connect via" popup. */
 const tiles: Tile[] = [
-  { id: "facebook", options: [{ label: "Connect Page", kind: "facebook" }] },
-  { id: "instagram", options: [{ label: "Connect Business or Creator", kind: "instagram" }] },
-  { id: "google", options: [{ label: "Connect Profile" }] },
-  { id: "linkedin", options: [{ label: "Connect Profile" }, { label: "Connect Page" }] },
-  { id: "youtube", options: [{ label: "Connect Channel" }] },
-  { id: "tiktok", options: [{ label: "Connect Business" }] },
-  { id: "x", options: [{ label: "Connect Profile" }] },
-  { id: "pinterest", options: [{ label: "Connect Board" }] },
-  { id: "threads", options: [{ label: "Connect Profile" }] },
-  { id: "bluesky", options: [{ label: "Connect Profile" }] },
+  { id: "facebook", buttons: [{ label: "Connect Page", choice: "facebook" }] },
+  { id: "instagram", buttons: [{ label: "Connect Business or Creator", choice: "instagram" }] },
+  { id: "google", buttons: [{ label: "Connect Profile", choice: "google_business" }] },
+  {
+    id: "linkedin",
+    buttons: [
+      { label: "Connect Profile", choice: "linkedin_profile" },
+      { label: "Connect Page", choice: "linkedin_page" },
+    ],
+  },
+  { id: "youtube", buttons: [{ label: "Connect Channel", choice: "youtube" }] },
+  { id: "tiktok", buttons: [{ label: "Connect Profile", choice: "tiktok" }] },
+  { id: "x", buttons: [{ label: "Connect Profile", choice: "x" }] },
+  { id: "pinterest", buttons: [{ label: "Connect Board", choice: "pinterest" }] },
+  { id: "threads", buttons: [{ label: "Connect Profile", choice: "threads" }] },
+  { id: "bluesky", buttons: [{ label: "Connect Profile", choice: "bluesky" }] },
 ];
 
-const checklist: Record<"facebook" | "instagram", string[]> = {
-  facebook: ["You are an admin of the Facebook Page.", "You log in with the Facebook account that manages the Page."],
-  instagram: [
-    "Your Instagram profile is a Business or Creator account.",
-    "You are an admin of the linked Facebook Page.",
-    "Your Facebook Page is linked to the Instagram profile.",
-  ],
+type Via = {
+  kind: string;
+  brand: NetworkId | "meta";
+  label: string;
+  recommended?: boolean;
+  features: [string, boolean][];
+  checks: [string, string][];
+};
+
+const yes = (t: string): [string, boolean] => [t, true];
+
+/** What each popup offers, with the checklist people see before logging in. */
+const vias: Record<string, { title: string; options: Via[] }> = {
+  facebook: {
+    title: "Connect Facebook Page",
+    options: [
+      {
+        kind: "facebook",
+        brand: "meta",
+        label: "Meta Business Suite",
+        recommended: true,
+        features: [yes("Publish text, photo, multi-photo and video posts."), yes("Schedule from the calendar and AI Agent."), yes("Track post status and errors.")],
+        checks: [
+          ["briefcase", "You are an admin of the Facebook Page."],
+          ["user", "You log in with the Facebook account that manages the Page."],
+        ],
+      },
+    ],
+  },
+  instagram: {
+    title: "Connect Instagram Business or Creator",
+    options: [
+      {
+        kind: "instagram",
+        brand: "meta",
+        label: "Meta Business Suite",
+        recommended: true,
+        features: [yes("Publish carousel posts, videos, and reels."), yes("Schedule from the calendar and AI Agent."), yes("Manage many accounts with one login."), yes("Track post status and errors.")],
+        checks: [
+          ["briefcase", "Your Instagram profile is a Business/Creator account."],
+          ["shield", "You are an admin of your Facebook Page."],
+          ["link", "Your Facebook Page is linked to Instagram Business profile."],
+        ],
+      },
+      {
+        kind: "instagram_login",
+        brand: "instagram",
+        label: "Instagram",
+        features: [yes("Publish carousel posts, videos, and reels."), yes("Schedule from the calendar and AI Agent."), yes("No Facebook Page needed."), ["Manage many accounts with one login.", false]],
+        checks: [
+          ["briefcase", "Your Instagram profile is a Business/Creator account."],
+          ["lock", "Login credentials for the Instagram account."],
+        ],
+      },
+    ],
+  },
+  google_business: {
+    title: "Connect Google Business Profile",
+    options: [
+      {
+        kind: "google_business",
+        brand: "google",
+        label: "Google",
+        features: [yes("Publish updates with a photo to your Business Profile."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["briefcase", "You are an owner or manager of the Business Profile."]],
+      },
+    ],
+  },
+  linkedin_profile: {
+    title: "Connect LinkedIn Profile",
+    options: [
+      {
+        kind: "linkedin_profile",
+        brand: "linkedin",
+        label: "LinkedIn",
+        features: [yes("Publish text and image posts to your profile."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["user", "Log in with the LinkedIn account you want to post from."]],
+      },
+    ],
+  },
+  linkedin_page: {
+    title: "Connect LinkedIn Page",
+    options: [
+      {
+        kind: "linkedin_page",
+        brand: "linkedin",
+        label: "LinkedIn",
+        features: [yes("Publish text and image posts to your company Page."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["shield", "You are a Super admin or Content admin of the LinkedIn Page."]],
+      },
+    ],
+  },
+  youtube: {
+    title: "Connect YouTube Channel",
+    options: [
+      {
+        kind: "youtube",
+        brand: "youtube",
+        label: "YouTube",
+        features: [yes("Upload videos with title and description."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [
+          ["video", "You have a YouTube channel on this Google account."],
+          ["upload", "Posts for YouTube need an MP4 video."],
+        ],
+      },
+    ],
+  },
+  tiktok: {
+    title: "Connect TikTok",
+    options: [
+      {
+        kind: "tiktok",
+        brand: "tiktok",
+        label: "TikTok",
+        features: [yes("Publish videos and photo posts."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["user", "Log in with the TikTok account you want to post from."]],
+      },
+    ],
+  },
+  x: {
+    title: "Connect X Profile",
+    options: [
+      {
+        kind: "x",
+        brand: "x",
+        label: "X",
+        features: [yes("Post text and up to 4 images."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["user", "Log in with the X account you want to post from."]],
+      },
+    ],
+  },
+  pinterest: {
+    title: "Connect Pinterest Board",
+    options: [
+      {
+        kind: "pinterest",
+        brand: "pinterest",
+        label: "Pinterest",
+        features: [yes("Create Pins with images on your boards."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["layout", "You have at least one board on Pinterest."]],
+      },
+    ],
+  },
+  threads: {
+    title: "Connect Threads Profile",
+    options: [
+      {
+        kind: "threads",
+        brand: "threads",
+        label: "Threads",
+        features: [yes("Post text, images, videos and carousels."), yes("Schedule from the calendar and AI Agent.")],
+        checks: [["user", "Log in with the Instagram account you use for Threads."]],
+      },
+    ],
+  },
 };
 
 export default function ConnectAccount() {
+  return (
+    <Suspense>
+      <ConnectInner />
+    </Suspense>
+  );
+}
+
+function ConnectInner() {
   const ws = useWorkspace();
   const { status } = useLive();
   const live = !!status?.loggedIn;
-  const router = useRouter();
-  const [meta, setMeta] = useState<"facebook" | "instagram" | null>(null);
-  const [soon, setSoon] = useState<NetworkId | null>(null);
-  const [demo, setDemo] = useState<NetworkId | null>(null);
-  const [name, setName] = useState("");
-
-  const choose = (t: Tile, o: Option) => {
-    if (live) {
-      if (o.kind) setMeta(o.kind);
-      else setSoon(t.id);
-    } else {
-      setName("");
-      setDemo(t.id);
-    }
-  };
+  const error = useSearchParams().get("error");
+  const [open, setOpen] = useState<string | null>(null);
 
   return (
     <>
@@ -73,12 +222,11 @@ export default function ConnectAccount() {
           <SetupProblems compact />
         </div>
       )}
-      {live && !status?.configured.meta && <MetaNotReady admin={!!status?.user?.isAdmin} />}
+      {error && <p className="mb-6 rounded-xl bg-danger-tint px-4 py-3 text-sm font-medium text-danger">{error}</p>}
 
       <div className="grid gap-x-5 gap-y-12 pt-8 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => {
           const count = ws.accounts.filter((a) => a.network === t.id).length;
-          const real = t.options.some((o) => o.kind);
           return (
             <div key={t.id} className="relative rounded-2xl border border-line bg-surface px-5 pb-6 pt-12 text-center">
               <span className="absolute -top-8 left-1/2 -translate-x-1/2 rounded-full bg-surface p-1.5 shadow-md ring-1 ring-line">
@@ -88,133 +236,185 @@ export default function ConnectAccount() {
               {count > 0 && <p className="mt-1 text-xs font-bold text-success">{count} connected</p>}
               <div className="my-4 border-t border-line" />
               <div className="flex flex-col items-center gap-3">
-                {t.options.map((o) => (
-                  <button key={o.label} type="button" onClick={() => choose(t, o)} className="text-sm font-bold text-primary hover:underline">
-                    {o.label}
+                {t.buttons.map((b) => (
+                  <button key={b.label} type="button" onClick={() => setOpen(b.choice)} className="text-sm font-bold text-primary hover:underline">
+                    {b.label}
                   </button>
                 ))}
-                {live && !real && <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-bold text-muted">Coming soon</span>}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Meta: Business Suite route, like SocialPilot */}
-      {meta && (
-        <Modal title={meta === "instagram" ? "Connect Instagram Business or Creator" : "Connect Facebook Page"} onClose={() => setMeta(null)} wide>
-          <div className="rounded-xl border-2 border-primary p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-muted">Connect via</p>
-                <p className="mt-1 flex flex-wrap items-center gap-2 text-lg font-bold text-ink">
-                  <span className="text-[#0866FF]">∞</span> Meta Business Suite
-                  <span className="rounded-md bg-success-tint px-2 py-0.5 text-xs font-bold text-success">Recommended</span>
-                </p>
-              </div>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
-                <Icon name="check" size={14} strokeWidth={3} />
-              </span>
-            </div>
-            <ul className="mt-4 space-y-2 text-sm text-ink-2">
-              {(meta === "instagram"
-                ? ["Publish posts and carousels", "Schedule from the calendar and AI Agent", "Track post status and errors"]
-                : ["Publish text, photo and multi-photo posts", "Schedule from the calendar and AI Agent", "Track post status and errors"]
-              ).map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <Icon name="check" size={16} className="text-success" strokeWidth={2.4} /> {f}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 border-t border-line pt-4">
-              <p className="text-sm font-bold text-ink">Before proceeding, ensure the following:</p>
-              <ul className="mt-3 space-y-2.5 text-sm text-ink-2">
-                {checklist[meta].map((c) => (
-                  <li key={c} className="flex items-start gap-2.5">
-                    <Icon name="briefcase" size={16} className="mt-0.5 shrink-0 text-muted" /> {c}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <Link href={`${BASE}/help`} className="text-sm text-ink-2">
-              Need help? <span className="font-bold text-primary">Learn more</span>
-            </Link>
-            {status?.configured.meta ? (
-              <a href={metaConnectUrl(meta)} className="btn btn-primary">
-                Proceed to connect
-              </a>
-            ) : (
-              <span className="text-sm font-bold text-ink-2">Facebook &amp; Instagram connection is being set up — please check back soon.</span>
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {soon && (
-        <Modal title={`${networkMeta[soon].name} — coming soon`} onClose={() => setSoon(null)}>
-          <div className="flex flex-col items-center text-center">
-            <SocialIcon id={soon} size={56} rounded="full" />
-            <p className="mt-4 text-ink-2">
-              {networkMeta[soon].name} needs its own developer app and approval from the network. It will appear here as soon as it’s set up. For now you
-              can connect Facebook Pages and Instagram Business accounts.
-            </p>
-            <button type="button" className="btn btn-primary mt-6" onClick={() => setSoon(null)}>Got it</button>
-          </div>
-        </Modal>
-      )}
-
-      {/* demo mode: simulated connection */}
-      {demo && (
-        <Modal title={`Connect ${networkMeta[demo].name} (demo)`} onClose={() => setDemo(null)}>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!name.trim()) return;
-              update((s) => ({
-                ...s,
-                accounts: [
-                  ...s.accounts,
-                  { id: uid(), network: demo, name: name.trim(), handle: name.trim().toLowerCase().replace(/\s+/g, ""), connectedAt: new Date().toISOString() },
-                ],
-              }));
-              router.push(`${APP}/accounts`);
-            }}
-          >
-            <p className="text-sm text-ink-2">Demo mode only simulates a connection. On your live site this opens the network’s real login.</p>
-            <label className="block text-sm font-medium text-ink">
-              Display name
-              <input autoFocus required value={name} onChange={(e) => setName(e.target.value)} className="field mt-1.5" placeholder="e.g. Johnny's Pizzeria" />
-            </label>
-            <button type="submit" className="btn btn-primary w-full">Add demo account</button>
-          </form>
-        </Modal>
-      )}
+      {open === "bluesky" ? (
+        <BlueskyModal live={live} onClose={() => setOpen(null)} />
+      ) : open && !live ? (
+        <DemoModal network={tiles.find((t) => t.buttons.some((b) => b.choice === open))!.id} onClose={() => setOpen(null)} />
+      ) : open ? (
+        <ViaModal choice={open} onClose={() => setOpen(null)} />
+      ) : null}
     </>
   );
 }
 
-function MetaNotReady({ admin }: { admin: boolean }) {
+function ViaModal({ choice, onClose }: { choice: string; onClose: () => void }) {
+  const { status } = useLive();
+  const spec = vias[choice];
+  const [kind, setKind] = useState(spec.options[0].kind);
+  const ready = status?.configured.connect?.[kind] ?? false;
+  const admin = !!status?.user?.isAdmin;
+
   return (
-    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warn-tint text-warn-ink">
-        <Icon name={admin ? "gear" : "clock"} size={22} />
-      </span>
-      <div className="flex-1">
-        <p className="font-bold text-ink">{admin ? "One-time setup: connect your Meta app" : "Facebook & Instagram are almost ready"}</p>
-        <p className="text-sm text-ink-2">
-          {admin
-            ? "Add your Meta App ID and Secret once in Platform settings. After that every user connects their Pages with just a Facebook login."
-            : "We are finishing the Facebook & Instagram connection. Please check back soon."}
-        </p>
+    <Modal title={spec.title} onClose={onClose} wide>
+      <div className={`grid gap-4 ${spec.options.length > 1 ? "md:grid-cols-2" : ""}`}>
+        {spec.options.map((o) => {
+          const on = o.kind === kind;
+          return (
+            <button
+              key={o.kind}
+              type="button"
+              onClick={() => setKind(o.kind)}
+              className={`rounded-xl border-2 p-5 text-left transition-colors ${on ? "border-primary" : "border-line hover:border-primary/40"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted">Connect via</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-lg font-bold text-ink">
+                    {o.brand === "meta" ? <span className="text-xl leading-none text-[#0866FF]">∞</span> : <SocialIcon id={o.brand} size={22} rounded="full" />}
+                    {o.label}
+                    {o.recommended && <span className="rounded-md bg-success-tint px-2 py-0.5 text-xs font-bold text-success">Recommended</span>}
+                  </p>
+                </div>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${on ? "bg-primary text-white" : "ring-2 ring-line"}`}>
+                  {on && <Icon name="check" size={14} strokeWidth={3} />}
+                </span>
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-ink-2">
+                {o.features.map(([f, ok]) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <Icon name={ok ? "check" : "close"} size={16} className={ok ? "text-success" : "text-danger"} strokeWidth={2.4} /> {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-5 border-t border-line pt-4">
+                <p className="text-sm font-bold text-ink">Before proceeding, ensure the following:</p>
+                <ul className="mt-3 space-y-2.5 text-sm text-ink-2">
+                  {o.checks.map(([icon, c]) => (
+                    <li key={c} className="flex items-start gap-2.5">
+                      <Icon name={icon} size={16} className="mt-0.5 shrink-0 text-muted" /> {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </button>
+          );
+        })}
       </div>
-      {admin && (
-        <Link href={`${APP}/settings/platform`} className="btn btn-primary">
-          Open Platform settings
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <Link href={`${BASE}/help`} className="text-sm text-ink-2">
+          Need more details? <span className="font-bold text-primary">Learn more</span>
         </Link>
-      )}
-    </div>
+        {ready ? (
+          <a href={connectUrl(kind)} className="btn btn-primary">
+            Proceed to Connect
+          </a>
+        ) : admin ? (
+          <Link href={`${APP}/settings/platform`} className="btn btn-primary">
+            Add app keys to enable
+          </Link>
+        ) : (
+          <span className="text-sm font-medium text-ink-2">This connection is being switched on — please try again shortly.</span>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function BlueskyModal({ live, onClose }: { live: boolean; onClose: () => void }) {
+  const router = useRouter();
+  const [handle, setHandle] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Modal title="Connect Bluesky Profile" onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!live) {
+            update((s) => ({
+              ...s,
+              accounts: [...s.accounts, { id: uid(), network: "bluesky", name: handle, handle, connectedAt: new Date().toISOString() }],
+            }));
+            router.push(`${APP}/accounts`);
+            return;
+          }
+          setBusy(true);
+          try {
+            await post("bluesky_connect", { handle, password });
+            router.push(`${APP}/accounts/select/`);
+          } catch (err) {
+            reportError(err);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <div className="flex items-center gap-3 rounded-xl bg-surface-2 p-4">
+          <SocialIcon id="bluesky" size={40} rounded="full" />
+          <p className="text-sm text-ink-2">
+            Use an <b>app password</b>, not your main password. Create one in Bluesky → Settings → Privacy and security →{" "}
+            <a href="https://bsky.app/settings/app-passwords" target="_blank" rel="noreferrer" className="font-bold text-primary">
+              App passwords
+            </a>
+            .
+          </p>
+        </div>
+        <label className="block text-sm font-medium text-ink">
+          Handle
+          <input autoFocus required value={handle} onChange={(e) => setHandle(e.target.value)} className="field mt-1.5" placeholder="yourname.bsky.social" />
+        </label>
+        <div className="block text-sm font-medium text-ink">
+          <span className="mb-1.5 block">App password</span>
+          <PasswordInput required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="xxxx-xxxx-xxxx-xxxx" autoComplete="off" />
+        </div>
+        <button type="submit" disabled={busy} className="btn btn-primary w-full disabled:opacity-50">
+          {busy ? "Connecting…" : "Proceed to Connect"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+/** Demo mode (no backend): adds a sample account. */
+function DemoModal({ network, onClose }: { network: NetworkId; onClose: () => void }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  return (
+    <Modal title={`Connect ${networkMeta[network].name} (demo)`} onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!name.trim()) return;
+          update((s) => ({
+            ...s,
+            accounts: [
+              ...s.accounts,
+              { id: uid(), network, name: name.trim(), handle: name.trim().toLowerCase().replace(/\s+/g, ""), connectedAt: new Date().toISOString() },
+            ],
+          }));
+          router.push(`${APP}/accounts`);
+        }}
+      >
+        <p className="text-sm text-ink-2">Demo mode only simulates a connection. On your live site this opens the network’s real login.</p>
+        <label className="block text-sm font-medium text-ink">
+          Display name
+          <input autoFocus required value={name} onChange={(e) => setName(e.target.value)} className="field mt-1.5" placeholder="e.g. Johnny's Pizzeria" />
+        </label>
+        <button type="submit" className="btn btn-primary w-full">Add demo account</button>
+      </form>
+    </Modal>
   );
 }

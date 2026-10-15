@@ -74,7 +74,20 @@ function toLocalInput(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const isVideo = (url: string) => /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
+
+/** What each network needs before it can publish; returns the first problem. */
+function mediaProblem(nets: string[], media: string[]) {
+  const videos = media.filter(isVideo).length;
+  const images = media.length - videos;
+  if (nets.includes("youtube") && videos === 0) return "YouTube needs a video (MP4).";
+  if (nets.includes("pinterest") && images === 0) return "Pinterest needs an image.";
+  for (const n of ["instagram", "tiktok"]) if (nets.includes(n) && media.length === 0) return `${n === "tiktok" ? "TikTok" : "Instagram"} needs an image or video.`;
+  return "";
+}
+
 async function toThumb(file: File): Promise<string> {
+  if (file.type.startsWith("video/")) throw new Error("Videos upload on your live site (demo mode stores images only).");
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => {
@@ -157,8 +170,9 @@ export default function Composer() {
 
   const submit = async (status: PostStatus, mode: "now" | "time" | "queue" | "draft") => {
     if ((!canSubmit && status !== "draft") || busy) return;
-    if (live && status !== "draft" && nets.includes("instagram") && media.length === 0) {
-      reportError(new Error("Instagram needs at least one image."));
+    const problem = live && status !== "draft" ? mediaProblem(nets, media) : "";
+    if (problem) {
+      reportError(new Error(problem));
       return;
     }
     let at = new Date();
@@ -216,9 +230,13 @@ export default function Composer() {
             <div className="flex flex-wrap gap-3">
               {media.map((m, k) => (
                 <span key={k} className="group relative h-24 w-24 overflow-hidden rounded-xl ring-1 ring-line">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m} alt="" className="h-full w-full object-cover" />
-                  <button type="button" onClick={() => setMedia(media.filter((_, i) => i !== k))} className="absolute right-1 top-1 rounded-full bg-night/70 p-1 text-white" aria-label="Remove image">
+                  {isVideo(m) ? (
+                    <video src={m} muted playsInline className="h-full w-full bg-night object-cover" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m} alt="" className="h-full w-full object-cover" />
+                  )}
+                  <button type="button" onClick={() => setMedia(media.filter((_, i) => i !== k))} className="absolute right-1 top-1 rounded-full bg-night/70 p-1 text-white" aria-label="Remove media">
                     <Icon name="close" size={12} />
                   </button>
                 </span>
@@ -230,12 +248,12 @@ export default function Composer() {
               >
                 <Icon name="upload" />
                 Drag and drop or <span className="font-bold text-primary">upload from device</span>
-                <span className="text-xs">PNG, JPG, GIF, WEBP</span>
+                <span className="text-xs">PNG, JPG, GIF, WEBP · MP4, MOV video</span>
               </button>
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
                 multiple
                 hidden
                 onChange={async (e) => {
@@ -363,10 +381,13 @@ export default function Composer() {
                     </span>
                   </div>
                   <p className="whitespace-pre-wrap px-3 pb-3 text-sm text-ink">{text || <span className="text-muted">Your caption will appear here.</span>}</p>
-                  {media[0] && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={media[0]} alt="" className="aspect-square w-full object-cover" />
-                  )}
+                  {media[0] &&
+                    (isVideo(media[0]) ? (
+                      <video src={media[0]} controls muted playsInline className="aspect-square w-full bg-night object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={media[0]} alt="" className="aspect-square w-full object-cover" />
+                    ))}
                   <div className="flex gap-5 border-t border-line p-3 text-muted">
                     <Icon name="heart" size={18} /><Icon name="chat" size={18} /><Icon name="share" size={18} />
                   </div>

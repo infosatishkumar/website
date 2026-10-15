@@ -2,15 +2,117 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Icon from "@/components/connector/Icon";
-import SocialIcon from "@/components/connector/SocialIcon";
-import { Card, PageHeader } from "@/components/connector/app/ui";
+import SocialIcon, { type NetworkId } from "@/components/connector/SocialIcon";
+import { Card, PageHeader, PasswordInput } from "@/components/connector/app/ui";
 import { get, post } from "@/lib/connector/api";
 import { initLive, reportError, useLive } from "@/lib/connector/store";
 
 type Values = Record<string, string>;
 type Settings = { values: Values; secrets: string[]; redirectUri: string; siteUrl: string; privacyUrl: string; termsUrl: string };
+type Field = { key: string; label: string; optional?: boolean };
+type Provider = { id: string; title: string; icons: NetworkId[]; readyKind: string; portal: string; hint: string; fields: Field[] };
 
-/** Site-owner page: connect the Meta app, Claude and email once — every user then just clicks "Connect". */
+/** Developer apps the site owner sets up once; users then just click Connect. */
+const providers: Provider[] = [
+  {
+    id: "meta",
+    title: "Facebook & Instagram (Meta Business Suite)",
+    icons: ["facebook", "instagram"],
+    readyKind: "facebook",
+    portal: "https://developers.facebook.com/apps/",
+    hint: "Business app with “Facebook Login for Business”.",
+    fields: [
+      { key: "meta_app_id", label: "App ID" },
+      { key: "meta_app_secret", label: "App Secret" },
+      { key: "meta_config_id", label: "Configuration ID", optional: true },
+    ],
+  },
+  {
+    id: "instagram",
+    title: "Instagram (direct login)",
+    icons: ["instagram"],
+    readyKind: "instagram_login",
+    portal: "https://developers.facebook.com/apps/",
+    hint: "Same Meta app → Instagram → “API setup with Instagram login”. Use the Instagram app ID and secret shown there.",
+    fields: [
+      { key: "instagram_app_id", label: "Instagram app ID" },
+      { key: "instagram_app_secret", label: "Instagram app secret" },
+    ],
+  },
+  {
+    id: "threads",
+    title: "Threads",
+    icons: ["threads"],
+    readyKind: "threads",
+    portal: "https://developers.facebook.com/apps/",
+    hint: "Meta app with the “Access the Threads API” use case.",
+    fields: [
+      { key: "threads_app_id", label: "Threads app ID" },
+      { key: "threads_app_secret", label: "Threads app secret" },
+    ],
+  },
+  {
+    id: "linkedin",
+    title: "LinkedIn",
+    icons: ["linkedin"],
+    readyKind: "linkedin_profile",
+    portal: "https://www.linkedin.com/developers/apps",
+    hint: "Add “Sign In with LinkedIn using OpenID Connect” and “Share on LinkedIn”. Pages need the Community Management API.",
+    fields: [
+      { key: "linkedin_client_id", label: "Client ID" },
+      { key: "linkedin_client_secret", label: "Client Secret" },
+    ],
+  },
+  {
+    id: "x",
+    title: "X (Twitter)",
+    icons: ["x"],
+    readyKind: "x",
+    portal: "https://developer.x.com/en/portal/dashboard",
+    hint: "User authentication settings → OAuth 2.0, type “Web App”, permission Read and write.",
+    fields: [
+      { key: "x_client_id", label: "OAuth 2.0 Client ID" },
+      { key: "x_client_secret", label: "Client Secret" },
+    ],
+  },
+  {
+    id: "google",
+    title: "YouTube & Google Business Profile",
+    icons: ["youtube", "google"],
+    readyKind: "youtube",
+    portal: "https://console.cloud.google.com/apis/credentials",
+    hint: "OAuth client (Web application). Enable YouTube Data API v3 and the Business Profile APIs.",
+    fields: [
+      { key: "google_client_id", label: "Client ID" },
+      { key: "google_client_secret", label: "Client secret" },
+    ],
+  },
+  {
+    id: "pinterest",
+    title: "Pinterest",
+    icons: ["pinterest"],
+    readyKind: "pinterest",
+    portal: "https://developers.pinterest.com/apps/",
+    hint: "App with boards:read, pins:write and user_accounts:read.",
+    fields: [
+      { key: "pinterest_app_id", label: "App ID" },
+      { key: "pinterest_app_secret", label: "App secret key" },
+    ],
+  },
+  {
+    id: "tiktok",
+    title: "TikTok",
+    icons: ["tiktok"],
+    readyKind: "tiktok",
+    portal: "https://developers.tiktok.com/apps/",
+    hint: "Add Login Kit + Content Posting API (Direct Post) and verify your domain for media URLs.",
+    fields: [
+      { key: "tiktok_client_key", label: "Client key" },
+      { key: "tiktok_client_secret", label: "Client secret" },
+    ],
+  },
+];
+
 export default function PlatformSettings() {
   const { status } = useLive();
   const [data, setData] = useState<Settings | null>(null);
@@ -47,141 +149,163 @@ export default function PlatformSettings() {
     );
   }
 
-  const field = (k: string) => ({
-    value: form[k] ?? "",
-    onChange: (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value })),
-  });
-  const secretHint = (k: string) => (data.values[k] ? `Saved (${data.values[k]}) — leave empty to keep` : "Not set");
+  const ready = status.configured.connect ?? {};
+  const input = (k: string, secret: boolean, placeholder = "") => {
+    const props = {
+      value: form[k] ?? "",
+      onChange: (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value })),
+      autoComplete: "off",
+      placeholder: secret ? (data.values[k] ? `Saved (${data.values[k]}) — leave empty to keep` : "Not set") : placeholder,
+    };
+    return secret ? <PasswordInput {...props} /> : <input {...props} className="field" />;
+  };
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader
-        title="Platform settings"
-        sub="Set these once for the whole website. Your users never see them — they just click Connect and log in with their own Facebook."
-      />
+      <PageHeader title="Platform settings" sub="Only you (the site owner) see this page. Your users just click Connect and log in with their own account." />
 
       <div className="space-y-6">
-        {/* Meta */}
-        <Section
-          title="Facebook & Instagram"
-          icon={
-            <span className="flex -space-x-2">
-              <SocialIcon id="facebook" size={34} rounded="full" />
-              <SocialIcon id="instagram" size={34} rounded="full" />
-            </span>
-          }
-          ready={status.configured.meta}
-          keys={["meta_app_id", "meta_app_secret", "meta_config_id"]}
-          form={form}
-          onSaved={load}
-        >
-          <ol className="mb-5 space-y-3 rounded-xl bg-surface-2 p-4 text-sm text-ink-2">
-            <Step n={1}>
-              Open{" "}
-              <a href="https://developers.facebook.com/apps/creation/" target="_blank" rel="noreferrer" className="font-bold text-primary">
-                developers.facebook.com → Create app
-              </a>{" "}
-              → use case <b>Other</b> → type <b>Business</b>. (Already have one? Open it.)
-            </Step>
-            <Step n={2}>
-              Add the product <b>Facebook Login for Business</b> → Settings → <b>Valid OAuth Redirect URIs</b>:
-              <Copy value={data.redirectUri} />
-            </Step>
-            <Step n={3}>
-              <b>App settings → Basic</b>: App domain <Copy value={new URL(data.siteUrl).host} inline /> Privacy Policy URL
-              <Copy value={data.privacyUrl} /> Terms / data deletion URL <Copy value={data.termsUrl} />
-            </Step>
-            <Step n={4}>Copy the <b>App ID</b> and <b>App Secret</b> from the same page into the boxes below and press Save.</Step>
-            <Step n={5}>
-              To let <b>everyone</b> connect (not only you): finish <b>Business verification</b>, request <b>Advanced access</b> for{" "}
-              <code className="text-xs">pages_show_list, pages_read_engagement, pages_manage_posts, business_management, instagram_basic, instagram_content_publish</code>{" "}
-              in App Review, then switch the app to <b>Live</b>.
-            </Step>
-          </ol>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Label text="App ID">
-              <input {...field("meta_app_id")} inputMode="numeric" className="field" placeholder="e.g. 1234567890123456" />
-            </Label>
-            <Label text="App Secret">
-              <input {...field("meta_app_secret")} type="password" autoComplete="off" className="field" placeholder={secretHint("meta_app_secret")} />
-            </Label>
-            <Label text="Configuration ID (optional)" hint="Facebook Login for Business → Configurations">
-              <input {...field("meta_config_id")} className="field" placeholder="Leave empty if you don't use one" />
-            </Label>
+        <section className="rounded-2xl border border-line bg-surface p-6">
+          <h2 className="text-lg font-bold text-ink">Social networks</h2>
+          <p className="mt-1 text-sm text-ink-2">Use these links in every developer app (redirect / callback URL, privacy policy, terms).</p>
+          <div className="mt-4 grid gap-2">
+            <Copy label="Callback URL" value={data.redirectUri} />
+            <Copy label="Privacy policy" value={data.privacyUrl} />
+            <Copy label="Terms & data deletion" value={data.termsUrl} />
           </div>
-        </Section>
+          <div className="mt-5 divide-y divide-line rounded-xl border border-line">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <SocialIcon id="bluesky" size={30} rounded="full" />
+              <p className="flex-1 font-bold text-ink">Bluesky</p>
+              <span className="rounded-full bg-success-tint px-3 py-1 text-xs font-bold text-success">Ready — no keys needed</span>
+            </div>
+            {providers.map((p) => (
+              <ProviderRow key={p.id} p={p} ready={!!ready[p.readyKind]} form={form} onSaved={load} input={input} secrets={data.secrets} />
+            ))}
+          </div>
+        </section>
 
-        {/* Claude */}
-        <Section
-          title="AI Agent (Claude)"
-          icon={
-            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-tint text-accent">
-              <Icon name="sparkles" size={18} />
-            </span>
-          }
-          ready={status.configured.anthropic}
-          keys={["anthropic_api_key"]}
-          form={form}
-          onSaved={load}
-        >
+        <Section title="AI Agent (Claude)" icon="sparkles" ready={status.configured.anthropic} keys={["anthropic_api_key"]} form={form} onSaved={load}>
           <Label
             text="Claude API key"
             hint={
-              <>
-                From{" "}
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="font-bold text-primary">
-                  console.anthropic.com → API Keys
-                </a>
-              </>
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="font-bold text-primary">
+                console.anthropic.com → API Keys
+              </a>
             }
           >
-            <input {...field("anthropic_api_key")} type="password" autoComplete="off" className="field" placeholder={secretHint("anthropic_api_key")} />
+            {input("anthropic_api_key", true)}
           </Label>
         </Section>
 
-        {/* Email */}
         <Section
           title="Email (verification & password reset)"
-          icon={
-            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-tint text-accent">
-              <Icon name="mail" size={18} />
-            </span>
-          }
+          icon="mail"
           ready={status.configured.email}
           keys={["smtp_host", "smtp_port", "smtp_user", "smtp_pass", "mail_from", "mail_from_name", "demo_notify_email"]}
           form={form}
           onSaved={load}
           extra={<TestEmail />}
         >
-          <p className="mb-4 text-sm text-ink-2">
-            Use a Hostinger mailbox (hPanel → Emails), e.g. <b>contact@satishkumar.net</b>, and its password.
-          </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Label text="Mailbox (SMTP user)">
-              <input {...field("smtp_user")} type="email" className="field" placeholder="contact@satishkumar.net" />
-            </Label>
-            <Label text="Mailbox password">
-              <input {...field("smtp_pass")} type="password" autoComplete="off" className="field" placeholder={secretHint("smtp_pass")} />
-            </Label>
-            <Label text="SMTP server">
-              <input {...field("smtp_host")} className="field" placeholder="smtp.hostinger.com" />
-            </Label>
-            <Label text="Port" hint="465 (SSL) or 587 (TLS)">
-              <input {...field("smtp_port")} inputMode="numeric" className="field" placeholder="465" />
-            </Label>
-            <Label text="From address">
-              <input {...field("mail_from")} type="email" className="field" placeholder="Same as mailbox" />
-            </Label>
-            <Label text="From name">
-              <input {...field("mail_from_name")} className="field" placeholder="Social Media Connector" />
-            </Label>
-            <Label text="Demo booking alerts go to">
-              <input {...field("demo_notify_email")} type="email" className="field" placeholder="contact@satishkumar.net" />
-            </Label>
+            <Label text="Mailbox (SMTP user)">{input("smtp_user", false, "contact@satishkumar.net")}</Label>
+            <Label text="Mailbox password">{input("smtp_pass", true)}</Label>
+            <Label text="SMTP server">{input("smtp_host", false, "smtp.hostinger.com")}</Label>
+            <Label text="Port" hint="465 (SSL) or 587 (TLS)">{input("smtp_port", false, "465")}</Label>
+            <Label text="From address">{input("mail_from", false, "Same as mailbox")}</Label>
+            <Label text="From name">{input("mail_from_name", false, "Social Media Connector")}</Label>
+            <Label text="Demo booking alerts go to">{input("demo_notify_email", false, "contact@satishkumar.net")}</Label>
           </div>
         </Section>
       </div>
     </div>
+  );
+}
+
+function ProviderRow({
+  p,
+  ready,
+  form,
+  onSaved,
+  input,
+  secrets,
+}: {
+  p: Provider;
+  ready: boolean;
+  form: Values;
+  onSaved: () => void;
+  input: (k: string, secret: boolean) => ReactNode;
+  secrets: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const save = useSave(p.fields.map((f) => f.key), form, onSaved);
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-2">
+        <span className="flex -space-x-2">
+          {p.icons.map((n) => (
+            <SocialIcon key={n} id={n} size={30} rounded="full" />
+          ))}
+        </span>
+        <span className="flex-1 font-bold text-ink">{p.title}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${ready ? "bg-success-tint text-success" : "bg-warn-tint text-warn-ink"}`}>{ready ? "Ready" : "Add keys"}</span>
+        <Icon name="chevronDown" size={18} className={`text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-5">
+          <p className="mb-4 text-sm text-ink-2">
+            {p.hint}{" "}
+            <a href={p.portal} target="_blank" rel="noreferrer" className="font-bold text-primary">
+              Open developer portal ↗
+            </a>
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {p.fields.map((f) => (
+              <Label key={f.key} text={f.label + (f.optional ? " (optional)" : "")}>
+                {input(f.key, secrets.includes(f.key))}
+              </Label>
+            ))}
+          </div>
+          <SaveBar save={save} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function useSave(keys: string[], form: Values, onSaved: () => void) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await post<{ warning?: string }>("platform_settings_save", Object.fromEntries(keys.map((k) => [k, form[k] ?? ""])));
+      await initLive(true);
+      onSaved();
+      setMsg({ ok: true, text: r.warning || "Saved." });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : "Could not save" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { busy, msg, run };
+}
+
+function SaveBar({ save, extra }: { save: ReturnType<typeof useSave>; extra?: ReactNode }) {
+  return (
+    <>
+      {save.msg && (
+        <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${save.msg.ok ? "bg-success-tint text-ink" : "bg-danger-tint text-danger"}`}>{save.msg.text}</p>
+      )}
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button type="button" disabled={save.busy} onClick={save.run} className="btn btn-primary disabled:opacity-50">
+          {save.busy ? "Checking…" : "Save"}
+        </button>
+        {extra}
+      </div>
+    </>
   );
 }
 
@@ -196,7 +320,7 @@ function Section({
   children,
 }: {
   title: string;
-  icon: ReactNode;
+  icon: string;
   ready: boolean;
   keys: string[];
   form: Values;
@@ -204,39 +328,20 @@ function Section({
   extra?: ReactNode;
   children: ReactNode;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const save = async () => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      const r = await post<{ warning?: string }>("platform_settings_save", Object.fromEntries(keys.map((k) => [k, form[k] ?? ""])));
-      await initLive(true);
-      onSaved();
-      setMsg({ ok: true, text: r.warning || "Saved." });
-    } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : "Could not save" });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const save = useSave(keys, form, onSaved);
   return (
     <section className="rounded-2xl border border-line bg-surface p-6">
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        {icon}
+        <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-primary-tint text-accent">
+          <Icon name={icon} size={18} />
+        </span>
         <h2 className="flex-1 text-lg font-bold text-ink">{title}</h2>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${ready ? "bg-success-tint text-success" : "bg-warn-tint text-warn-ink"}`}>
           {ready ? "Ready" : "Not set up"}
         </span>
       </div>
       {children}
-      {msg && <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-success-tint text-ink" : "bg-danger-tint text-danger"}`}>{msg.text}</p>}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button type="button" disabled={busy} onClick={save} className="btn btn-primary disabled:opacity-50">
-          {busy ? "Checking…" : "Save"}
-        </button>
-        {extra}
-      </div>
+      <SaveBar save={save} extra={extra} />
     </section>
   );
 }
@@ -268,38 +373,34 @@ function TestEmail() {
 
 function Label({ text, hint, children }: { text: string; hint?: ReactNode; children: ReactNode }) {
   return (
-    <label className="block text-sm font-medium text-ink">
+    <div className="block text-sm font-medium text-ink">
       <span className="mb-1.5 block">{text}</span>
       {children}
       {hint && <span className="mt-1 block text-xs font-normal text-muted">{hint}</span>}
-    </label>
+    </div>
   );
 }
 
-function Step({ n, children }: { n: number; children: ReactNode }) {
-  return (
-    <li className="flex gap-3">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">{n}</span>
-      <div className="min-w-0 flex-1 leading-relaxed">{children}</div>
-    </li>
-  );
-}
-
-function Copy({ value, inline = false }: { value: string; inline?: boolean }) {
+function Copy({ label, value }: { label: string; value: string }) {
   const [done, setDone] = useState(false);
   return (
-    <span className={`${inline ? "mx-1 inline-flex" : "mt-1.5 flex"} max-w-full items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-1.5`}>
-      <code className="min-w-0 flex-1 truncate text-xs text-ink">{value}</code>
-      <button
-        type="button"
-        onClick={() => navigator.clipboard?.writeText(value).then(() => {
-          setDone(true);
-          setTimeout(() => setDone(false), 1500);
-        })}
-        className="shrink-0 text-xs font-bold text-primary"
-      >
-        {done ? "Copied" : "Copy"}
-      </button>
-    </span>
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+      <span className="w-44 shrink-0 text-xs font-bold text-muted">{label}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2">
+        <code className="min-w-0 flex-1 truncate text-xs text-ink">{value}</code>
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard?.writeText(value).then(() => {
+              setDone(true);
+              setTimeout(() => setDone(false), 1500);
+            })
+          }
+          className="shrink-0 text-xs font-bold text-primary"
+        >
+          {done ? "Copied" : "Copy"}
+        </button>
+      </span>
+    </div>
   );
 }

@@ -43,6 +43,16 @@ return [
     'meta_config_id' => '',
     'graph_version' => 'v23.0',
 
+    // Other networks — easier to add from the website: Settings → Platform settings.
+    // Callback / redirect URL for every developer app: https://yourdomain.com/api/oauth.php
+    'instagram_app_id' => '', 'instagram_app_secret' => '',   // Instagram direct login
+    'threads_app_id' => '', 'threads_app_secret' => '',
+    'linkedin_client_id' => '', 'linkedin_client_secret' => '',
+    'x_client_id' => '', 'x_client_secret' => '',
+    'google_client_id' => '', 'google_client_secret' => '',   // YouTube + Google Business Profile
+    'pinterest_app_id' => '', 'pinterest_app_secret' => '',
+    'tiktok_client_key' => '', 'tiktok_client_secret' => '',
+
     // Random text that protects the web cron URL.
     'cron_secret' => 'change-this-random-string',
 

@@ -176,16 +176,6 @@ function Frame({ children }: { children: ReactNode }) {
             );
           })}
           <div className="mt-auto flex flex-col items-center gap-1 pt-3">
-            {status?.user?.isAdmin && (
-              <Link
-                href={`${APP}/settings/platform`}
-                className={`flex w-[72px] flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium hover:bg-surface-2 hover:text-ink ${
-                  norm(pathname).startsWith(`${APP}/settings`) ? "bg-surface-2 text-ink" : "text-muted"
-                }`}
-              >
-                <Icon name="gear" size={22} /> Settings
-              </Link>
-            )}
             <Link href={`${BASE}/help`} className="flex w-[72px] flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-ink">
               <Icon name="help" size={22} /> Help
             </Link>

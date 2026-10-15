@@ -10,9 +10,25 @@ import { get, post } from "@/lib/connector/api";
 import { APP } from "@/lib/connector/data";
 import { refreshLive, reportError, useLive } from "@/lib/connector/store";
 
+/** Picker wording per connect button: network name and what gets picked. */
+const kindLabels: Record<string, [string, string]> = {
+  facebook: ["Facebook", "pages"],
+  instagram: ["Instagram", "pages"],
+  instagram_login: ["Instagram", "pages"],
+  threads: ["Threads", "profiles"],
+  linkedin_profile: ["LinkedIn", "profiles"],
+  linkedin_page: ["LinkedIn", "pages"],
+  x: ["X", "profiles"],
+  youtube: ["YouTube", "channels"],
+  google_business: ["Google Business", "locations"],
+  pinterest: ["Pinterest", "boards"],
+  tiktok: ["TikTok", "profiles"],
+  bluesky: ["Bluesky", "profiles"],
+};
+
 type Pending = { key: string; network: NetworkId; name: string; handle: string; picture: string; via: string; connected: boolean };
 
-/** After Meta login: pick which Pages / Instagram accounts to connect (SocialPilot-style). */
+/** After a network login: pick which pages / profiles / boards to connect (SocialPilot-style). */
 export default function SelectAccounts() {
   const { status } = useLive();
   const router = useRouter();
@@ -33,7 +49,8 @@ export default function SelectAccounts() {
   const list = useMemo(() => (items ?? []).filter((i) => `${i.name} ${i.handle}`.toLowerCase().includes(q.toLowerCase())), [items, q]);
   const selectable = list.filter((i) => !i.connected);
   const allOn = selectable.length > 0 && selectable.every((i) => picked.includes(i.key));
-  const title = kind === "instagram" ? "Connect Instagram accounts" : kind === "facebook" ? "Connect Facebook Pages" : "Connect accounts";
+  const [net, noun] = kindLabels[kind] ?? ["", "accounts"];
+  const title = `Connect ${net ? net + " " : ""}${noun[0].toUpperCase()}${noun.slice(1)}`;
 
   const connect = async () => {
     setBusy(true);
@@ -65,7 +82,7 @@ export default function SelectAccounts() {
       />
       <section className="card">
         <div className="border-b border-line px-5 py-4">
-          <p className="inline-block border-b-2 border-warning pb-2 font-bold text-ink">Select {kind === "facebook" ? "Pages" : "accounts"}</p>
+          <p className="inline-block border-b-2 border-warning pb-2 font-bold text-ink">Select {noun[0].toUpperCase() + noun.slice(1)}</p>
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-ink">
               <input
@@ -75,11 +92,10 @@ export default function SelectAccounts() {
                 disabled={selectable.length === 0}
                 onChange={() => setPicked(allOn ? [] : selectable.map((i) => i.key))}
               />
-              Select all {selectable.length} {kind === "facebook" ? "page" : "account"}
-              {selectable.length === 1 ? "" : "s"}
+              Select all {selectable.length} {selectable.length === 1 ? noun.replace(/s$/, "") : noun}
             </label>
             <div className="flex items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 py-1.5">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pages" className="w-48 bg-transparent text-sm text-ink outline-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${noun}`} className="w-48 bg-transparent text-sm text-ink outline-none" />
               <Icon name="search" size={16} className="text-muted" />
             </div>
           </div>
@@ -90,8 +106,12 @@ export default function SelectAccounts() {
           ) : items.length === 0 ? (
             <Empty
               icon="plug"
-              title="No pages found"
-              sub="Facebook didn’t return any Pages or Instagram Business accounts. Make sure you selected them on the Facebook screen and that Instagram is linked to a Page."
+              title={`No ${noun} found`}
+              sub={
+                kind === "facebook" || kind === "instagram"
+                  ? "Facebook didn’t return any Pages or Instagram Business accounts. Make sure you selected them on the Facebook screen and that Instagram is linked to a Page."
+                  : `${net || "The network"} didn’t return any ${noun} for this login. Check you are using the right account and try again.`
+              }
               action={<Link href={`${APP}/accounts/create`} className="btn btn-primary">Try again</Link>}
             />
           ) : (
@@ -124,7 +144,7 @@ export default function SelectAccounts() {
                         </span>
                       </span>
                       <span className="font-medium text-ink">{i.name}</span>
-                      {i.handle && i.network === "instagram" && <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-muted">@{i.handle}</span>}
+                      {i.handle && i.network !== "facebook" && i.handle !== i.name && <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-muted">@{i.handle}</span>}
                       {i.via && <span className="text-xs text-muted">via {i.via}</span>}
                       <span className="ml-auto text-xs text-muted">{i.connected ? "Already connected" : networkMeta[i.network].name}</span>
                     </label>

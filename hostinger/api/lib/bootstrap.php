@@ -6,10 +6,17 @@ require __DIR__ . '/../vendor/autoload.php';
 /** Settings the site owner can change from the dashboard (stored in the database). */
 const PLATFORM_KEYS = [
     'meta_app_id', 'meta_app_secret', 'meta_config_id',
+    'instagram_app_id', 'instagram_app_secret', 'threads_app_id', 'threads_app_secret',
+    'linkedin_client_id', 'linkedin_client_secret', 'x_client_id', 'x_client_secret',
+    'google_client_id', 'google_client_secret', 'pinterest_app_id', 'pinterest_app_secret',
+    'tiktok_client_key', 'tiktok_client_secret',
     'anthropic_api_key',
     'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'mail_from', 'mail_from_name', 'demo_notify_email',
 ];
-const PLATFORM_SECRETS = ['meta_app_secret', 'anthropic_api_key', 'smtp_pass'];
+const PLATFORM_SECRETS = [
+    'meta_app_secret', 'anthropic_api_key', 'smtp_pass', 'instagram_app_secret', 'threads_app_secret',
+    'linkedin_client_secret', 'x_client_secret', 'google_client_secret', 'pinterest_app_secret', 'tiktok_client_secret',
+];
 
 /** Loads smc-config.php (one level above public_html, or public_html as a fallback). */
 function config(): array
@@ -149,6 +156,11 @@ function migrate(PDO $pdo): void
     foreach (['accounts', 'posts', 'agent_threads'] as $t) {
         if (!has_column($pdo, $t, 'user_id')) {
             $pdo->exec("ALTER TABLE $t ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1");
+        }
+    }
+    foreach (['refresh_token' => 'TEXT NOT NULL DEFAULT ""', 'expires_at' => 'INTEGER NOT NULL DEFAULT 0', 'meta' => "TEXT NOT NULL DEFAULT '{}'"] as $col => $def) {
+        if (!has_column($pdo, 'accounts', $col)) {
+            $pdo->exec("ALTER TABLE accounts ADD COLUMN $col $def");
         }
     }
     if (!has_column($pdo, 'agent_threads', 'title')) {
