@@ -71,9 +71,7 @@ try {
         case 'reset':
             json_out(auth_reset(body()));
         case 'logout':
-            start_session();
-            $_SESSION = [];
-            session_destroy();
+            logout_user();
             json_out(['ok' => true]);
 
         /* ---------- accounts ---------- */

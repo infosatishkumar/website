@@ -8,7 +8,7 @@ import { LogoMark } from "../Logo";
 import { PasswordInput } from "./ui";
 import { ApiError } from "@/lib/connector/api";
 import { APP, BASE } from "@/lib/connector/data";
-import { forgotPassword, login, resendVerification, resetPassword, signup, useLive } from "@/lib/connector/store";
+import { forgotPassword, initLive, login, resendVerification, resetPassword, signup, useLive } from "@/lib/connector/store";
 
 type Mode = "login" | "signup" | "forgot" | "reset" | "check-email";
 
@@ -33,6 +33,7 @@ export default function AuthScreen() {
   );
   const [info, setInfo] = useState("");
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [exists, setExists] = useState(false);
 
   const run = (fn: () => Promise<void>) => async (e?: FormEvent) => {
     e?.preventDefault();
@@ -44,6 +45,7 @@ export default function AuthScreen() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       if (err instanceof ApiError && err.status === 403) setNeedsVerify(true);
+      if (err instanceof ApiError && err.status === 409) setExists(true);
     } finally {
       setBusy(false);
     }
@@ -54,6 +56,7 @@ export default function AuthScreen() {
     setError("");
     setInfo("");
     setNeedsVerify(false);
+    setExists(false);
   };
 
   const submit =
@@ -72,11 +75,10 @@ export default function AuthScreen() {
               setInfo("If an account exists for that email, a reset link is on its way.");
             })
           : run(async () => {
+              // The reset link proves the email, so the server logs you straight in.
               await resetPassword(resetToken ?? "", password);
-              router.replace(`${APP}/`);
-              setPassword("");
-              setMode("login");
-              setInfo("Password updated. Log in with your new password.");
+              router.replace(`${APP}/launchpad/`);
+              await initLive(true);
             });
 
   return (
@@ -159,10 +161,10 @@ export default function AuthScreen() {
                       : "Choose a new password with at least 8 characters."}
               </p>
 
-              <form className="mt-6 space-y-4" onSubmit={submit}>
+              <form className="mt-6 space-y-4" method="post" action="#" onSubmit={submit}>
                 {mode === "signup" && (
                   <Field label="Full name">
-                    <input required aria-label="Full name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Your name" />
+                    <input required aria-label="Full name" name="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Your name" />
                   </Field>
                 )}
                 {mode !== "reset" && (
@@ -170,8 +172,10 @@ export default function AuthScreen() {
                     <input
                       required
                       type="email"
+                      name="email"
+                      id="smc-email"
                       aria-label="Email"
-                      autoComplete="email"
+                      autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="field"
@@ -193,6 +197,8 @@ export default function AuthScreen() {
                     <PasswordInput
                       required
                       aria-label={mode === "reset" ? "New password" : "Password"}
+                      name="password"
+                      id="smc-password"
                       minLength={mode === "login" ? 1 : 8}
                       autoComplete={mode === "login" ? "current-password" : "new-password"}
                       value={password}
@@ -204,6 +210,16 @@ export default function AuthScreen() {
 
                 {error && <Note tone="error">{error}</Note>}
                 {info && <Note tone="ok">{info}</Note>}
+                {exists && (
+                  <div className="flex flex-wrap gap-3">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => { go("login"); }}>
+                      Log in
+                    </button>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => { go("forgot"); }}>
+                      Reset password
+                    </button>
+                  </div>
+                )}
                 {needsVerify && (
                   <button
                     type="button"
@@ -252,6 +268,7 @@ export default function AuthScreen() {
                   </>
                 )}
               </div>
+              {mode === "login" && <p className="mt-4 text-center text-xs text-muted">You’ll stay logged in on this device for 90 days.</p>}
               {mode === "signup" && <p className="mt-4 text-center text-xs text-muted">By creating an account you agree to our terms and privacy policy.</p>}
             </>
           )}

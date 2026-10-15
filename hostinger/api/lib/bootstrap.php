@@ -135,6 +135,7 @@ function migrate(PDO $pdo): void
         updated_at TEXT NOT NULL
     )');
     $pdo->exec('CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)');
+    $pdo->exec('CREATE TABLE IF NOT EXISTS auth_tokens (selector TEXT PRIMARY KEY, hash TEXT NOT NULL, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS rate_limits (ip TEXT NOT NULL, action TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS pending_accounts (
         user_id INTEGER PRIMARY KEY,
@@ -223,6 +224,16 @@ function start_session(): void
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
+    // Hostinger's default PHP session files are cleaned after ~24 minutes, which logged people out.
+    // Keep ours in a private folder next to the database for 30 days.
+    ini_set('session.gc_maxlifetime', (string) (60 * 60 * 24 * 30));
+    $dir = dirname((string) config()['db_path']) . '/smc-sessions';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0700, true);
+    }
+    if (is_dir($dir) && is_writable($dir)) {
+        session_save_path($dir);
+    }
     session_name('smc_session');
     session_set_cookie_params([
         'lifetime' => 60 * 60 * 24 * 30,
@@ -243,11 +254,81 @@ function current_user(): ?array
     start_session();
     $id = (int) ($_SESSION['uid'] ?? 0);
     if (!$id) {
+        $id = remember_login();
+    }
+    if (!$id) {
         return $user = null;
     }
     $s = db()->prepare('SELECT * FROM users WHERE id = ? AND verified_at IS NOT NULL');
     $s->execute([$id]);
     return $user = ($s->fetch() ?: null);
+}
+
+/* ---------------- "keep me logged in" ---------------- */
+
+const REMEMBER_COOKIE = 'smc_remember';
+const REMEMBER_DAYS = 90;
+
+function remember_cookie(string $value, int $expires): void
+{
+    setcookie(REMEMBER_COOKIE, $value, [
+        'expires' => $expires,
+        'path' => '/',
+        'secure' => (($_SERVER['HTTPS'] ?? '') !== '' && $_SERVER['HTTPS'] !== 'off'),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+/** Starts a logged-in session and a long-lived device token (selector + hashed validator). */
+function login_user(array $u): void
+{
+    start_session();
+    session_regenerate_id(true);
+    $_SESSION['uid'] = (int) $u['id'];
+    $selector = bin2hex(random_bytes(9));
+    $validator = bin2hex(random_bytes(32));
+    $expires = time() + REMEMBER_DAYS * 86400;
+    db()->prepare('INSERT INTO auth_tokens (selector, hash, user_id, expires) VALUES (?, ?, ?, ?)')
+        ->execute([$selector, hash('sha256', $validator), (int) $u['id'], $expires]);
+    db()->prepare('DELETE FROM auth_tokens WHERE expires < ?')->execute([time()]);
+    remember_cookie("$selector:$validator", $expires);
+}
+
+/** Restores the session from the device token when the PHP session is gone. */
+function remember_login(): int
+{
+    $raw = (string) ($_COOKIE[REMEMBER_COOKIE] ?? '');
+    if (!preg_match('/^([a-f0-9]{18}):([a-f0-9]{64})$/', $raw, $m)) {
+        return 0;
+    }
+    $s = db()->prepare('SELECT * FROM auth_tokens WHERE selector = ? AND expires > ?');
+    $s->execute([$m[1], time()]);
+    $t = $s->fetch();
+    if (!$t || !hash_equals($t['hash'], hash('sha256', $m[2]))) {
+        remember_cookie('', time() - 3600);
+        return 0;
+    }
+    // Rotate the validator so a copied cookie stops working.
+    $validator = bin2hex(random_bytes(32));
+    $expires = time() + REMEMBER_DAYS * 86400;
+    db()->prepare('UPDATE auth_tokens SET hash = ?, expires = ? WHERE selector = ?')->execute([hash('sha256', $validator), $expires, $m[1]]);
+    remember_cookie($m[1] . ":$validator", $expires);
+    session_regenerate_id(true);
+    $_SESSION['uid'] = (int) $t['user_id'];
+    return (int) $t['user_id'];
+}
+
+function logout_user(): void
+{
+    start_session();
+    $raw = (string) ($_COOKIE[REMEMBER_COOKIE] ?? '');
+    if (str_contains($raw, ':')) {
+        db()->prepare('DELETE FROM auth_tokens WHERE selector = ?')->execute([explode(':', $raw)[0]]);
+    }
+    remember_cookie('', time() - 3600);
+    $_SESSION = [];
+    session_destroy();
 }
 
 function uid(): int

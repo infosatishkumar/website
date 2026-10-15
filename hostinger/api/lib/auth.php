@@ -46,7 +46,7 @@ function auth_signup(array $b): array
     $s->execute([$email]);
     $existing = $s->fetch();
     if ($existing && $existing['verified_at']) {
-        fail('An account with this email already exists. Log in instead.');
+        json_out(['error' => 'You already have an account with this email. Log in, or reset your password if you forgot it.', 'exists' => true], 409);
     }
     if ($existing) {
         $pdo->prepare('UPDATE users SET name = ?, password_hash = ? WHERE id = ?')->execute([$name, password_hash($password, PASSWORD_DEFAULT), $existing['id']]);
@@ -83,9 +83,7 @@ function auth_verify(string $token): never
         exit;
     }
     db()->prepare('UPDATE users SET verified_at = ?, verify_token = NULL WHERE id = ?')->execute([now_iso(), $u['id']]);
-    start_session();
-    session_regenerate_id(true);
-    $_SESSION['uid'] = (int) $u['id'];
+    login_user($u);
     header('Location: ' . app_url('welcome=1'));
     exit;
 }
@@ -120,9 +118,7 @@ function auth_login(array $b): array
     if (!$u['verified_at']) {
         json_out(['error' => 'Please verify your email first. Check your inbox (and spam folder).', 'needsVerification' => true], 403);
     }
-    start_session();
-    session_regenerate_id(true);
-    $_SESSION['uid'] = (int) $u['id'];
+    login_user($u);
     return ['ok' => true, 'user' => user_public($u)];
 }
 
@@ -159,5 +155,8 @@ function auth_reset(array $b): array
     // Resetting via email also proves the address.
     db()->prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL, verified_at = COALESCE(verified_at, ?) WHERE id = ?')
         ->execute([password_hash($password, PASSWORD_DEFAULT), now_iso(), $u['id']]);
-    return ['ok' => true];
+    // New password: sign out every other device, then log in here.
+    db()->prepare('DELETE FROM auth_tokens WHERE user_id = ?')->execute([$u['id']]);
+    login_user($u);
+    return ['ok' => true, 'user' => user_public($u)];
 }
