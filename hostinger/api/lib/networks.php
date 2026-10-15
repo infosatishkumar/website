@@ -253,11 +253,15 @@ function oauth_callback(array $q): string
         return $back . '?error=' . rawurlencode('Login expired, please try again.');
     }
     unset($_SESSION['oauth'][$state]);
+    $kind = (string) $entry['kind'];
     if (!empty($q['error']) || empty($q['code'])) {
-        $why = (string) ($q['error_description'] ?? $q['error_message'] ?? $q['error'] ?? 'Connection cancelled');
+        $why = html_entity_decode((string) ($q['error_description'] ?? $q['error_message'] ?? $q['error'] ?? 'Connection cancelled'), ENT_QUOTES | ENT_HTML5);
+        if (($q['error'] ?? '') === 'unauthorized_scope_error' || str_contains($why, 'not authorized for your application')) {
+            $why = scope_help($kind, $why);
+        }
+        error_log("SMC connect error ($kind): $why");
         return $back . '?error=' . rawurlencode($why);
     }
-    $kind = $entry['kind'];
     try {
         $code = (string) $q['code'];
         if (CONNECT_KINDS[$kind]['provider'] === 'meta') {
@@ -270,6 +274,24 @@ function oauth_callback(array $q): string
         return $back . '?error=' . rawurlencode($e->getMessage());
     }
     return base_url() . '/connector/app/accounts/select/';
+}
+
+/** Plain-language fix for "scope not authorized" (the developer app is missing a product). */
+function scope_help(string $kind, string $raw): string
+{
+    if (!is_admin(current_user())) {
+        return 'This network is not fully set up yet. Please try again later.';
+    }
+    $fix = [
+        'linkedin_profile' => 'LinkedIn Developers → your app → Products: add “Share on LinkedIn” and “Sign In with LinkedIn using OpenID Connect” (both are instant).',
+        'linkedin_page' => 'LinkedIn Developers → Products: request “Community Management API”. LinkedIn only allows it on a separate app with no other products, and approves it after review. Put that app’s keys in Platform settings → LinkedIn → Pages app.',
+        'x' => 'X developer console → your app → User authentication settings: set permissions to “Read and write”.',
+        'youtube' => 'Google Cloud → APIs & Services: enable “YouTube Data API v3” and add the YouTube scopes on the OAuth consent screen.',
+        'google_business' => 'Google Cloud: enable the Business Profile APIs (access must be approved by Google).',
+        'tiktok' => 'TikTok developer portal: add Login Kit and Content Posting API to your app.',
+        'pinterest' => 'Pinterest developer portal: your app needs boards:read, pins:write and user_accounts:read.',
+    ][$kind] ?? 'Add the missing permission to your developer app.';
+    return "Your app is missing a permission ($raw). Fix: $fix";
 }
 
 /** Exchanges the code and lists the accounts the person can post to. */
