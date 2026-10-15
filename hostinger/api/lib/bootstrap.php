@@ -155,6 +155,7 @@ function migrate(PDO $pdo): void
             $pdo->exec("ALTER TABLE users ADD COLUMN $col $def");
         }
     }
+    $pdo->exec('CREATE TABLE IF NOT EXISTS verify_tokens (hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS auth_tokens (selector TEXT PRIMARY KEY, hash TEXT NOT NULL, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS rate_limits (ip TEXT NOT NULL, action TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL)');
     $pdo->exec('CREATE TABLE IF NOT EXISTS pending_accounts (

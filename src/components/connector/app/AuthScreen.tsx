@@ -21,17 +21,17 @@ export default function AuthScreen() {
   const authMsg = params.get("auth");
   const [mode, setMode] = useState<Mode>(resetToken ? "reset" : "login");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(
     authMsg === "invalid"
-      ? "This verification link is invalid or was already used. Log in, or sign up again."
+      ? "This verification link has expired or is not valid. Enter your email and password below, then press “Resend verification email” to get a new link."
       : authMsg === "expired"
         ? "Your session expired. Please log in again."
         : "",
   );
-  const [info, setInfo] = useState("");
+  const [info, setInfo] = useState(authMsg === "verified" ? "Your email is verified. Log in with your password." : "");
   const [needsVerify, setNeedsVerify] = useState(false);
   const [exists, setExists] = useState(false);
 

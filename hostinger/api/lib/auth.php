@@ -15,8 +15,11 @@ function valid_email(string $email): bool
 
 function send_verification(array $user): void
 {
+    // Every email gets its own token, valid for 7 days, so an older email's link still works.
     $token = bin2hex(random_bytes(24));
-    db()->prepare('UPDATE users SET verify_token = ? WHERE id = ?')->execute([hash('sha256', $token), $user['id']]);
+    $pdo = db();
+    $pdo->prepare('DELETE FROM verify_tokens WHERE expires < ?')->execute([time()]);
+    $pdo->prepare('INSERT INTO verify_tokens (hash, user_id, expires) VALUES (?, ?, ?)')->execute([hash('sha256', $token), $user['id'], time() + 7 * 86400]);
     $url = base_url() . '/api/index.php?action=verify&token=' . $token;
     send_mail(
         $user['email'],
@@ -75,14 +78,31 @@ function auth_resend(array $b): array
 
 function auth_verify(string $token): never
 {
-    $s = db()->prepare('SELECT * FROM users WHERE verify_token = ?');
-    $s->execute([hash('sha256', $token)]);
+    $pdo = db();
+    $hash = hash('sha256', $token);
+    $s = $pdo->prepare('SELECT u.*, t.used AS token_used FROM verify_tokens t JOIN users u ON u.id = t.user_id WHERE t.hash = ? AND t.expires >= ?');
+    $s->execute([$hash, time()]);
     $u = $s->fetch();
+    if (!$u) {
+        // Links sent before this upgrade live in users.verify_token.
+        $s = $pdo->prepare('SELECT *, 0 AS token_used FROM users WHERE verify_token = ?');
+        $s->execute([$hash]);
+        $u = $s->fetch();
+    }
     if (!$u) {
         header('Location: ' . app_url('auth=invalid'));
         exit;
     }
-    db()->prepare('UPDATE users SET verified_at = ?, verify_token = NULL WHERE id = ?')->execute([now_iso(), $u['id']]);
+    if ($u['verified_at'] && $u['token_used']) {
+        // Clicked again (or a mail scanner opened it first): the email is verified — just log in.
+        header('Location: ' . app_url('auth=verified&email=' . rawurlencode($u['email'])));
+        exit;
+    }
+    if (!$u['verified_at']) {
+        $pdo->prepare('UPDATE users SET verified_at = ?, verify_token = NULL WHERE id = ?')->execute([now_iso(), $u['id']]);
+    }
+    $pdo->prepare('UPDATE verify_tokens SET used = 1 WHERE user_id = ?')->execute([$u['id']]);
+    unset($u['token_used']);
     login_user($u);
     header('Location: ' . app_url('welcome=1'));
     exit;
