@@ -851,8 +851,9 @@ html:not(.js-anim) .hscroll { overflow-x: auto; }
 .pcard { background: #fff; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease); }
 .pcard:hover { transform: translateY(-6px); box-shadow: 0 24px 50px -24px rgba(10,10,20,0.25); }
 .pcard.is-hidden { display: none; }
-.pcard__media { position: relative; aspect-ratio: 4 / 3; background: var(--ink); overflow: hidden; }
-.pcard__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease); }
+.pcard__media { position: relative; aspect-ratio: 16 / 9; background: #f3f3f5; overflow: hidden; }
+.pcard__media:has(.pcard__ph) { background: var(--ink); }
+.pcard__media img { width: 100%; height: 100%; object-fit: contain; padding: 10px; transition: transform 0.8s var(--ease); }
 .pcard:hover .pcard__media img { transform: scale(1.06); }
 .pcard__ph { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,0.35); }
 .pcard__ph svg { width: 64px; height: 64px; }

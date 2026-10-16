@@ -166,23 +166,33 @@ def delta_projects():
     done = [r for r in rows if r["status"] == "completed"]
     live = [r for r in rows if r["status"] == "ongoing"]
     rows = done + live
+    sqft = sum(int(re.sub(r"\D", "", r["size"])) for r in rows if re.sub(r"\D", "", r.get("size", "")))
+    cities = {r["location"].split(",")[0].strip().lower() for r in rows if r.get("location")}
+    stats = [(len(rows), "", "Projects in this portfolio"),
+             (round(sqft / 100000, 1), "L+", "Sq.ft built up (where listed)"),
+             (len(cities), "", "Project locations")]
+    stat_html = "".join(
+        f'      <div class="stat" data-reveal><div class="stat__n{" grad-text" if i == 0 else ""}">{n}{suf}</div><div class="stat__l">{lbl}</div></div>\n'
+        for i, (n, suf, lbl) in enumerate(stats))
+    buttons = ['      <button type="button" class="is-on" data-filter="all" aria-pressed="true">All projects</button>\n']
+    if live:
+        buttons.append(f'      <button type="button" data-filter="completed" aria-pressed="false">Completed ({len(done)})</button>\n')
+        buttons.append(f'      <button type="button" data-filter="ongoing" aria-pressed="false">Ongoing ({len(live)})</button>\n')
+    filters = ('    <div class="filters" role="group" aria-label="Filter projects" data-reveal>\n' + "".join(buttons) + '    </div>\n') if live else ""
     return ('<section class="section paper-2" data-nav-light id="delta-projects">\n  <div class="wrap">\n'
             '    <div class="sec-head">\n      <div>\n'
             '        <span class="eyebrow" data-reveal>Delta Infrastructures · Projects</span>\n'
-            '        <h2 class="h2" data-split>Projects we\'ve <span class="serif grad-text">engineered.</span></h2>\n      </div>\n'
-            '      <p class="lead" data-reveal>Structural design, analysis and detailing by DigitalNgage for Delta Infrastructures — '
-            'from completed buildings to structures rising on site today.</p>\n    </div>\n'
-            '    <div class="grid stats stats--3" style="margin-bottom:40px">\n'
-            f'      <div class="stat" data-reveal><div class="stat__n grad-text" data-count="{len(rows)}">{len(rows)}</div><div class="stat__l">Projects in this portfolio</div></div>\n'
-            f'      <div class="stat" data-reveal><div class="stat__n" data-count="{len(done)}">{len(done)}</div><div class="stat__l">Completed</div></div>\n'
-            f'      <div class="stat" data-reveal><div class="stat__n" data-count="{len(live)}">{len(live)}</div><div class="stat__l">Ongoing</div></div>\n'
-            '    </div>\n'
-            '    <div class="filters" role="group" aria-label="Filter projects" data-reveal>\n'
-            '      <button type="button" class="is-on" data-filter="all" aria-pressed="true">All projects</button>\n'
-            f'      <button type="button" data-filter="completed" aria-pressed="false">Completed ({len(done)})</button>\n'
-            f'      <button type="button" data-filter="ongoing" aria-pressed="false">Ongoing ({len(live)})</button>\n'
-            '    </div>\n'
-            '    <div class="grid pgrid">\n' + "\n".join(project_card(r) for r in rows) + '\n    </div>\n  </div>\n</section>\n')
+            '        <h2 class="h2" data-split>Delta\'s completed <span class="serif grad-text">steel buildings.</span></h2>\n      </div>\n'
+            '      <p class="lead" data-reveal>Pre-engineered buildings, warehouses, mezzanines, a school, sports halls and commercial steel '
+            'structures delivered by Delta Infrastructures across Karnataka, Andhra Pradesh, Telangana and Goa — the portfolio our '
+            'engineering and digital teams support.</p>\n    </div>\n'
+            '    <div class="grid stats stats--3" style="margin-bottom:40px">\n' + stat_html + '    </div>\n'
+            + filters +
+            '    <div class="grid pgrid">\n' + "\n".join(project_card(r) for r in rows) + '\n    </div>\n'
+            '    <div class="btn-row" style="margin-top:40px;justify-content:center" data-reveal>'
+            '<a class="btn" href="https://www.deltainfrastructures.com/projects.html" target="_blank" rel="noopener" data-magnetic>'
+            'See all projects on deltainfrastructures.com ↗</a></div>\n'
+            '  </div>\n</section>\n')
 
 
 def client_wall():
