@@ -124,6 +124,67 @@ def client_cards():
     return "\n".join(out)
 
 
+PROJECTS_CSV = SRC / "data" / "delta-projects.csv"
+
+
+def load_projects():
+    """Rows of src/data/delta-projects.csv (Delta Infrastructures projects)."""
+    import csv
+    if not PROJECTS_CSV.exists():
+        return []
+    with PROJECTS_CSV.open(encoding="utf-8-sig", newline="") as f:
+        rows = [{k: (v or "").strip() for k, v in r.items() if k} for r in csv.DictReader(f)]
+    rows = [r for r in rows if r.get("name")]
+    for r in rows:
+        st = r.get("status", "").lower()
+        r["status"] = "ongoing" if st.startswith("on") else "completed"
+    return rows
+
+
+def project_card(r):
+    from html import escape as e
+    meta = " · ".join(e(r[k]) for k in ("location", "structure_type", "size", "year") if r.get(k))
+    img = r.get("image", "")
+    media = (f'<img src="images/projects/{e(img)}" alt="{e(r["name"])}" loading="lazy">' if img
+             else f'<span class="pcard__ph">{ICONS["factory"]}</span>')
+    label = "Ongoing" if r["status"] == "ongoing" else "Completed"
+    scope = "".join(f"<span>{e(x.strip())}</span>" for x in r.get("scope", "").split(";") if x.strip())
+    return (f'      <article class="pcard" data-cat="{r["status"]}" data-reveal>'
+            f'<div class="pcard__media">{media}<span class="pcard__status pcard__status--{r["status"]}">{label}</span></div>'
+            f'<div class="pcard__body"><h3>{e(r["name"])}</h3>'
+            + (f'<small>{meta}</small>' if meta else "")
+            + (f'<p>{e(r["description"])}</p>' if r.get("description") else "")
+            + (f'<div class="ccard__tags">{scope}</div>' if scope else "")
+            + '</div></article>')
+
+
+def delta_projects():
+    """Completed / ongoing projects gallery. Renders nothing until the CSV has rows."""
+    rows = load_projects()
+    if not rows:
+        return ""
+    done = [r for r in rows if r["status"] == "completed"]
+    live = [r for r in rows if r["status"] == "ongoing"]
+    rows = done + live
+    return ('<section class="section paper-2" data-nav-light id="delta-projects">\n  <div class="wrap">\n'
+            '    <div class="sec-head">\n      <div>\n'
+            '        <span class="eyebrow" data-reveal>Delta Infrastructures · Projects</span>\n'
+            '        <h2 class="h2" data-split>Projects we\'ve <span class="serif grad-text">engineered.</span></h2>\n      </div>\n'
+            '      <p class="lead" data-reveal>Structural design, analysis and detailing by DigitalNgage for Delta Infrastructures — '
+            'from completed buildings to structures rising on site today.</p>\n    </div>\n'
+            '    <div class="grid stats stats--3" style="margin-bottom:40px">\n'
+            f'      <div class="stat" data-reveal><div class="stat__n grad-text" data-count="{len(rows)}">{len(rows)}</div><div class="stat__l">Projects in this portfolio</div></div>\n'
+            f'      <div class="stat" data-reveal><div class="stat__n" data-count="{len(done)}">{len(done)}</div><div class="stat__l">Completed</div></div>\n'
+            f'      <div class="stat" data-reveal><div class="stat__n" data-count="{len(live)}">{len(live)}</div><div class="stat__l">Ongoing</div></div>\n'
+            '    </div>\n'
+            '    <div class="filters" role="group" aria-label="Filter projects" data-reveal>\n'
+            '      <button type="button" class="is-on" data-filter="all" aria-pressed="true">All projects</button>\n'
+            f'      <button type="button" data-filter="completed" aria-pressed="false">Completed ({len(done)})</button>\n'
+            f'      <button type="button" data-filter="ongoing" aria-pressed="false">Ongoing ({len(live)})</button>\n'
+            '    </div>\n'
+            '    <div class="grid pgrid">\n' + "\n".join(project_card(r) for r in rows) + '\n    </div>\n  </div>\n</section>\n')
+
+
 def client_wall():
     """'Trusted by 50+ brands' logo wall section (Work and Contact pages)."""
     return ('<section class="section white" data-nav-light id="brands">\n  <div class="wrap">\n    <div class="sec-head">\n      <div>\n'
@@ -224,6 +285,8 @@ def render(tpl, meta, name):
         tpl = tpl.replace("{{client_wall}}", client_wall())
     if "{{client_cards}}" in tpl:
         tpl = tpl.replace("{{client_cards}}", client_cards())
+    if "{{delta_projects}}" in tpl:
+        tpl = tpl.replace("{{delta_projects}}", delta_projects())
     if "{{client_grid}}" in tpl:
         tpl = tpl.replace("{{client_grid}}", client_grid())
     for k, v in values.items():

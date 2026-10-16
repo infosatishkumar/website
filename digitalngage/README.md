@@ -50,3 +50,23 @@ glass cards, marquees, counters, stacking case-study cards, pinned horizontal
 process section, parallax, spotlight/tilt cards and testimonial slider.
 Everything falls back to a static layout when JavaScript is off or the visitor
 has "reduce motion" enabled.
+
+## Delta Infrastructures project gallery
+
+`structural-engineering.html` shows a Completed / Ongoing projects gallery
+built from `src/data/delta-projects.csv`. The section is hidden while the
+file has no rows. One row per project:
+
+| column | example |
+| --- | --- |
+| status | `Completed` or `Ongoing` |
+| name | Warehouse for ABC Logistics |
+| location | Bengaluru |
+| structure_type | PEB warehouse |
+| size | 20,000 sq.ft |
+| year | 2025 |
+| scope | `Design & analysis;2D/3D detailing` (separate with `;`) |
+| description | One or two sentences |
+| image | file name in `public_html/images/projects/` (optional) |
+
+Then run `python3 build.py`.
