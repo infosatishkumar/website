@@ -387,6 +387,7 @@ html:not(.js-anim) .rotator > span:not(:first-child) { visibility: hidden; }
 .ccard__tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .ccard__tags span { font-size: 0.72rem; padding: 4px 10px; border-radius: 100px; background: var(--paper-2); color: var(--orange-2); font-weight: 600; }
 .ccard__link { margin-top: auto; }
+.ccard__links { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .ccard.is-hidden { display: none; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 40px; }
