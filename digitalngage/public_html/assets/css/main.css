@@ -372,6 +372,7 @@ html:not(.js-anim) .rotator > span:not(:first-child) { visibility: hidden; }
 .case__media img { position: absolute; inset: -8% 0; width: 100%; height: 116%; object-fit: cover; object-position: top center; }
 .case--kio .case__media { background: #0f3d2a; }
 .case--crm .case__media { background: #1f2a44; }
+.case--delta .case__media { background: #0e0e16; }
 .case--dark { background: var(--ink-2); color: var(--on-dark); border-color: var(--line-dark); }
 .case--dark .case__kpis { border-color: var(--line-dark); }
 .case--dark .case__kpis span, .case--dark p { color: var(--on-dark-2); }
