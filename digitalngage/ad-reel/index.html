@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DigitalNgage — Ad Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Instrument+Serif:ital@0;1&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{ --ink:#0a0a14; --ink2:#15151f; --orange:#ff5a1f; --amber:#ffb020; --violet:#7c4dff; --paper:#fff8f3; --green:#16a34a; --red:#ef4444; }
+*{ margin:0; padding:0; box-sizing:border-box; }
+html,body{ width:1080px; height:1920px; overflow:hidden; background:#000; }
+body{ font-family:"DM Sans",sans-serif; color:#fff; -webkit-font-smoothing:antialiased; }
+img{ display:block; }
+#stage{ position:absolute; inset:0; overflow:hidden; background:var(--ink); }
+#gridl{ position:absolute; inset:-200px; background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px); background-size:90px 90px; }
+#net{ position:absolute; inset:0; }
+#cam{ position:absolute; inset:0; transform-origin:50% 45%; }
+.scene{ position:absolute; inset:0; overflow:hidden; visibility:hidden; }
+.abs{ position:absolute; }
+.c{ left:0; right:0; text-align:center; }
+.sora{ font-family:Sora,sans-serif; font-weight:800; letter-spacing:-.045em; line-height:.95; }
+.serif{ font-family:"Instrument Serif",serif; font-style:italic; font-weight:400; letter-spacing:-.02em; }
+.o{ color:var(--orange); } .a{ color:var(--amber); } .v{ color:var(--violet); }
+.label{ font-family:Sora,sans-serif; font-weight:700; font-size:28px; letter-spacing:.3em; text-transform:uppercase; color:var(--orange); }
+.pill{ display:inline-flex; align-items:center; gap:14px; padding:16px 30px; border-radius:999px; font-family:Sora,sans-serif; font-weight:700; font-size:30px; background:#fff; color:var(--ink); }
+.word{ display:inline-block; }
+#flash{ position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; }
+#grain{ position:absolute; inset:0; width:1080px; height:1920px; opacity:.07; mix-blend-mode:overlay; image-rendering:pixelated; }
+#vignette{ position:absolute; inset:0; box-shadow:inset 0 0 300px rgba(0,0,0,.6); pointer-events:none; }
+/* top brand bug + progress */
+#bug{ position:absolute; left:60px; top:70px; display:flex; align-items:center; gap:16px; font-family:Sora,sans-serif; font-weight:700; font-size:26px; letter-spacing:.06em; }
+#bug img{ width:54px; height:54px; border-radius:14px; }
+#prog{ position:absolute; left:60px; right:60px; top:44px; height:6px; border-radius:6px; background:rgba(255,255,255,.14); overflow:hidden; }
+#prog i{ position:absolute; inset:0; background:var(--orange); transform-origin:left; transform:scaleX(0); }
+/* captions */
+#cap{ position:absolute; left:70px; right:70px; top:1490px; text-align:center; font-family:Sora,sans-serif; font-weight:800; font-size:64px; line-height:1.12; letter-spacing:-.02em; }
+#cap .w{ display:inline-block; margin:0 10px; opacity:.35; transform:translateY(0); text-shadow:0 6px 24px rgba(0,0,0,.55); }
+#cap.dark{ color:var(--ink); background:rgba(255,248,243,.94); border-radius:36px; padding:18px 10px; box-shadow:0 20px 50px -20px rgba(0,0,0,.35); } #cap.dark .w{ text-shadow:none; }
+#cap .w.on{ opacity:1; }
+#cap .w.hl{ color:var(--ink); background:var(--amber); border-radius:14px; padding:0 12px; margin:0 4px; }
+/* scene: hook */
+.chart{ position:absolute; left:120px; top:820px; width:840px; height:520px; }
+.notif{ position:absolute; left:140px; right:140px; top:560px; height:150px; border-radius:36px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.14); display:flex; align-items:center; gap:28px; padding:0 34px; backdrop-filter:blur(10px); }
+.notif .ni{ width:86px; height:86px; border-radius:24px; background:var(--red); display:grid; place-items:center; font-family:Sora; font-weight:800; font-size:44px; }
+.notif b{ font-family:Sora; font-size:38px; } .notif small{ display:block; font-size:28px; opacity:.7; margin-top:6px; }
+/* services */
+.svc{ position:absolute; left:80px; right:80px; height:250px; border-radius:48px; display:flex; align-items:center; gap:40px; padding:0 48px; visibility:hidden; box-shadow:0 40px 80px -30px rgba(0,0,0,.6); }
+.svc .ic{ width:150px; height:150px; flex:0 0 150px; border-radius:40px; display:grid; place-items:center; }
+.svc .ic svg{ width:84px; height:84px; }
+.svc b{ font-family:Sora,sans-serif; font-weight:800; font-size:64px; letter-spacing:-.035em; line-height:1; }
+.svc small{ display:block; font-size:30px; font-weight:500; margin-top:12px; opacity:.85; }
+.svc .n{ position:absolute; right:44px; top:30px; font-family:Sora; font-weight:800; font-size:26px; opacity:.6; letter-spacing:.1em; }
+/* roof */
+.tile{ position:absolute; width:150px; height:150px; border-radius:40px; display:grid; place-items:center; }
+.tile svg{ width:76px; height:76px; }
+/* devices */
+.phone{ position:absolute; border-radius:70px; border:16px solid #0b0b0b; background:#0b0b0b; overflow:hidden; box-shadow:0 60px 120px -30px rgba(0,0,0,.85); }
+.phone img{ width:100%; border-radius:54px; }
+.browser{ position:absolute; background:#fff; border-radius:26px; overflow:hidden; box-shadow:0 60px 120px -30px rgba(0,0,0,.8); }
+.bbar{ height:56px; display:flex; align-items:center; gap:12px; padding:0 22px; background:#f1ede9; }
+.bbar i{ width:16px; height:16px; border-radius:50%; background:#ff5f57; display:block; }
+.bbar i:nth-child(2){ background:#febc2e; } .bbar i:nth-child(3){ background:#28c840; }
+.bbar span{ margin-left:16px; padding:6px 20px; border-radius:999px; background:#fff; color:#666; font-size:22px; }
+.chip{ position:absolute; display:flex; align-items:center; gap:14px; padding:18px 30px; border-radius:999px; background:#fff; color:var(--ink); font-family:Sora,sans-serif; font-weight:700; font-size:32px; box-shadow:0 24px 50px -14px rgba(0,0,0,.6); }
+.chip i{ width:20px; height:20px; border-radius:50%; display:block; }
+.big{ font-family:Sora,sans-serif; font-weight:800; letter-spacing:-.05em; line-height:.9; }
+.proj{ position:absolute; left:90px; width:900px; height:360px; border-radius:36px; overflow:hidden; background:#f3f3f5; box-shadow:0 40px 80px -30px rgba(0,0,0,.75); }
+.proj img{ width:100%; height:100%; object-fit:cover; }
+.proj span{ position:absolute; left:22px; bottom:20px; padding:10px 20px; border-radius:999px; background:rgba(10,10,20,.82); font-family:Sora; font-weight:700; font-size:24px; }
+.logo{ position:absolute; width:220px; height:110px; border-radius:22px; overflow:hidden; background:#fff; box-shadow:0 20px 40px -16px rgba(0,0,0,.6); }
+.logo img{ width:100%; height:100%; object-fit:cover; }
+.slot{ position:absolute; left:140px; right:140px; top:620px; height:520px; border-radius:56px; border:5px dashed rgba(255,255,255,.5); display:grid; place-items:center; }
+.cta-btn{ display:inline-flex; align-items:center; gap:22px; padding:34px 60px; border-radius:999px; background:var(--orange); color:#fff; font-family:Sora,sans-serif; font-weight:800; font-size:62px; letter-spacing:-.02em; box-shadow:0 30px 70px -20px rgba(255,90,31,.8); }
+.ring{ position:absolute; border:4px solid var(--orange); border-radius:999px; }
+.contact{ display:flex; flex-direction:column; align-items:center; gap:22px; font-family:Sora; font-weight:700; font-size:40px; }
+.contact div{ display:flex; align-items:center; gap:18px; }
+.contact svg{ width:46px; height:46px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="gridl"></div>
+  <canvas id="net" width="1080" height="1920"></canvas>
+  <div id="cam">
+
+    <!-- 1. HOOK -->
+    <section class="scene" id="s-hook">
+      <div class="abs c label" id="h-label" style="top:300px">Real talk</div>
+      <div class="abs c sora" style="top:370px;font-size:112px" id="h-l1"><span class="word">Is</span> <span class="word">your</span> <span class="word">business</span></div>
+      <div class="notif" id="h-notif"><div class="ni">0</div><div><b>New leads today</b><small>Website · Instagram · Google</small></div></div>
+      <svg class="chart" id="h-chart" viewBox="0 0 840 520">
+        <g stroke="rgba(255,255,255,.12)" stroke-width="2"><line x1="0" y1="130" x2="840" y2="130"/><line x1="0" y1="260" x2="840" y2="260"/><line x1="0" y1="390" x2="840" y2="390"/></g>
+        <polyline id="h-down" fill="none" stroke="#ef4444" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" points="20,90 180,150 320,120 470,260 610,300 800,470" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <polyline id="h-up" fill="none" stroke="#ff5a1f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" points="20,470 180,400 320,420 470,260 610,190 800,40" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+        <path id="h-arrow" d="M740 40 L800 40 L800 100" fill="none" stroke="#ff5a1f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+      </svg>
+      <div class="abs c sora" style="top:1290px;font-size:150px;color:#ef4444" id="h-stuck">STUCK ONLINE?</div>
+      <div class="abs c sora" style="top:1030px;font-size:166px;line-height:.92" id="h-not"><span class="o">NOT</span><br>ANYMORE!</div>
+    </section>
+
+    <!-- 2. BRAND -->
+    <section class="scene" id="s-brand">
+      <div class="ring" id="b-r1" style="left:290px;top:440px;width:500px;height:500px"></div>
+      <div class="ring" id="b-r2" style="left:290px;top:440px;width:500px;height:500px;border-color:var(--violet)"></div>
+      <img id="b-mark" src="../public_html/favicon-512.png" style="position:absolute;left:390px;top:540px;width:300px;height:300px;border-radius:70px">
+      <div class="abs c label" id="b-this" style="top:1010px">This is</div>
+      <div class="abs" id="b-logo" style="left:110px;top:1070px;width:860px;overflow:hidden"><img src="../public_html/images/brand/logo-white.png" style="width:860px"></div>
+      <div class="abs c" id="b-tag" style="top:1290px;font-size:38px;font-weight:500;opacity:.8">Marketing · Technology · Engineering</div>
+    </section>
+
+    <!-- 3. SERVICES (cards stack) -->
+    <section class="scene" id="s-svc">
+      <div class="abs c label" style="top:250px" id="sv-label">What we do</div>
+      <div class="abs c sora" style="top:300px;font-size:92px" id="sv-count"><span id="sv-n">01</span><span style="opacity:.35"> / 07</span></div>
+      <div id="svcs"></div>
+    </section>
+
+    <!-- 4. ONE ROOF -->
+    <section class="scene" id="s-roof">
+      <svg class="abs" id="r-roof" style="left:120px;top:380px;width:840px;height:300px" viewBox="0 0 840 300"><polyline id="r-line" points="30,280 420,30 810,280" fill="none" stroke="#ff5a1f" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1000" stroke-dashoffset="1000"/></svg>
+      <div id="tiles"></div>
+      <div class="abs c sora" style="top:1150px;font-size:110px" id="r-t1">ALL UNDER</div>
+      <div class="abs c sora" style="top:1265px;font-size:150px" id="r-t2"><span class="serif o" style="font-size:170px">one</span> ROOF.</div>
+    </section>
+
+    <!-- 5. KIO -->
+    <section class="scene" id="s-kio" style="background:#0f3d2a">
+      <div class="abs c label" style="top:250px;color:var(--amber)" id="k-label">Case study · E-commerce</div>
+      <div class="abs c sora" style="top:300px;font-size:120px" id="k-title">KIO <span class="serif a" style="font-size:136px">Organics</span></div>
+      <div class="phone" id="k-phone" style="left:300px;top:500px;width:480px"><img src="../public_html/images/kio/mobile-product.jpg"></div>
+      <div class="phone" id="k-phone2" style="left:300px;top:500px;width:480px"><img src="../public_html/images/kio/mobile-checkout.jpg"></div>
+      <div class="chip" id="k-c1" style="left:60px;top:700px"><i style="background:#5f259f"></i>UPI</div>
+      <div class="chip" id="k-c2" style="left:720px;top:820px"><i style="background:#1a73e8"></i>Cards</div>
+      <div class="chip" id="k-c3" style="left:40px;top:1000px"><i style="background:#16a34a"></i>Cash on Delivery</div>
+      <div class="chip" id="k-c4" style="left:700px;top:1130px"><i style="background:#ff5a1f"></i>8 ways to pay</div>
+    </section>
+
+    <!-- 6. METRO CRM -->
+    <section class="scene" id="s-crm" style="background:#0f1630">
+      <div class="abs c label" style="top:250px;color:#2ed3ea" id="c-label">Case study · CRM software</div>
+      <div class="abs c sora" style="top:300px;font-size:120px" id="c-title">Metro <span class="serif" style="font-size:136px;color:#2ed3ea">CRM</span></div>
+      <div style="position:absolute;left:0;right:0;top:500px;perspective:2000px"><div class="browser" id="c-browser" style="left:70px;width:940px"><div class="bbar"><i></i><i></i><i></i><span>Metro CRM · Dashboard</span></div><img src="../public_html/images/crm/dashboard.jpg" style="width:940px"></div></div>
+      <div class="abs c big" style="top:1175px;font-size:220px" id="c-num">0</div>
+      <div class="abs c sora" style="top:1385px;font-size:56px;letter-spacing:.06em;opacity:.85" id="c-sub">LEADS MANAGED</div>
+    </section>
+
+    <!-- 7. DELTA -->
+    <section class="scene" id="s-delta">
+      <div class="abs c label" style="top:250px" id="d-label">Case study · Structural engineering</div>
+      <div class="abs c sora" style="top:300px;font-size:104px" id="d-title">Delta <span class="serif o" style="font-size:118px">Infrastructures</span></div>
+      <div id="projs"></div>
+      <div class="abs c big" style="top:1110px;font-size:260px" id="d-num">0</div>
+      <div class="abs c sora" style="top:1350px;font-size:56px;letter-spacing:.06em;opacity:.85" id="d-sub">PROJECTS · 7.5L+ SQ.FT</div>
+    </section>
+
+    <!-- 8. BRANDS -->
+    <section class="scene" id="s-brands" style="background:var(--paper);color:var(--ink)">
+      <div id="logos"></div>
+      <div class="abs" id="br-card" style="left:140px;right:140px;top:640px;height:560px;border-radius:60px;background:var(--ink);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 60px 120px -30px rgba(0,0,0,.6)">
+        <div class="label">Trusted by</div>
+        <div class="big" style="font-size:300px;margin-top:10px"><span id="br-num">0</span><span class="o">+</span></div>
+        <div class="sora" style="font-size:72px">brands</div>
+      </div>
+    </section>
+
+    <!-- 9. YOUR BRAND -->
+    <section class="scene" id="s-next">
+      <div class="abs c sora" style="top:340px;font-size:120px" id="n-t1">Your brand</div>
+      <div class="slot" id="n-slot"><div class="sora" style="font-size:96px;letter-spacing:-.03em"><span id="n-type"></span><span id="n-cur" class="o">|</span></div></div>
+      <div class="abs c sora" style="top:1210px;font-size:110px" id="n-t2">could be <span class="serif o" style="font-size:150px">next.</span></div>
+    </section>
+
+    <!-- 10. CTA -->
+    <section class="scene" id="s-cta">
+      <img id="e-mark" src="../public_html/favicon-512.png" style="position:absolute;left:430px;top:250px;width:220px;height:220px;border-radius:54px">
+      <div class="abs c sora" style="top:540px;font-size:120px" id="e-t1">Book your</div>
+      <div class="abs c" style="top:690px" id="e-btnw"><span class="cta-btn" id="e-btn">FREE AUDIT
+        <svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+      <div class="abs c sora" style="top:880px;font-size:64px;opacity:.85" id="e-today">today</div>
+      <div class="abs c sora" style="top:1040px;font-size:96px" id="e-url">digitalngage<span class="o">.com</span></div>
+      <div class="abs c" style="top:1190px" id="e-contact">
+        <div class="contact">
+          <div id="e-ph"><svg viewBox="0 0 24 24" fill="none" stroke="#ff5a1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></svg>+91 93532 41391</div>
+          <div id="e-wa"><svg viewBox="0 0 24 24" fill="#25d366"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1s-.5-.1-.7.1-.8 1-1 1.2-.4.2-.7.1a8.2 8.2 0 0 1-2.4-1.5 9 9 0 0 1-1.7-2.1c-.2-.3 0-.5.1-.6l.5-.5.3-.5a.6.6 0 0 0 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.4 3.4 0 0 0-1 2.5 5.9 5.9 0 0 0 1.2 3.1 13.4 13.4 0 0 0 5.2 4.6c.7.3 1.3.5 1.7.6a4 4 0 0 0 1.9.1 3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.1-.3-.2-.6-.3ZM12 21.8a9.9 9.9 0 0 1-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.8 9.8 0 1 1 12 21.8Zm8.4-18.2A11.8 11.8 0 0 0 1.8 17.9L.1 24l6.3-1.6a11.8 11.8 0 0 0 5.6 1.4A11.8 11.8 0 0 0 20.4 3.6Z"/></svg>WhatsApp us</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <div id="cap"></div>
+  <div id="bug"><img src="../public_html/favicon-512.png"><span>DIGITALNGAGE</span></div>
+  <div id="prog"><i></i></div>
+  <canvas id="grain" width="270" height="480"></canvas>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+</div>
+<script src="../public_html/assets/vendor/gsap.min.js"></script>
+<script src="ad.js"></script>
+</body>
+</html>
