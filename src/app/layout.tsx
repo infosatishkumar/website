@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
-import SmoothScroll from "@/components/SmoothScroll";
-import Cursor from "@/components/Cursor";
-import RevealObserver from "@/components/RevealObserver";
 
 const body = Geist({
   variable: "--font-body",
@@ -31,14 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${body.variable} ${display.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
-        <SmoothScroll />
-        <Cursor />
-        <RevealObserver />
-        <Nav />
-        <main className="flex flex-1 flex-col">{children}</main>
-        <Footer />
-      </body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }
