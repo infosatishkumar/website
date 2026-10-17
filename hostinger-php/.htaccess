@@ -1,0 +1,8 @@
+DirectoryIndex index.php
+Options -Indexes
+
+# Never serve internals directly
+RedirectMatch 404 ^/(.*/)?(lib|data)/
+<FilesMatch "\.(json|md|txt|log)$">
+  Require all denied
+</FilesMatch>

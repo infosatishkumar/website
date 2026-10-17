@@ -1,0 +1,36 @@
+FlowForge (PHP edition) — Hostinger par install
+===============================================
+
+1) Hostinger File Manager kholo → public_html
+   - Pehle public_html ki SAARI purani files delete karo
+     (src, public, supabase, package.json, flowforge-mvp, purane zip... sab).
+
+2) flowforge-php.zip ko public_html mein upload karo
+   → zip par right-click → Extract → "public_html" mein hi extract karo
+   → extract ke baad public_html ke andar seedha ye dikhna chahiye:
+        index.php, api.php, hook.php, cron.php, oauth.php, assets/, lib/, data/, .htaccess
+     (agar sab ek extra folder ke andar chala gaya ho, to unhe bahar public_html mein move karo)
+   → zip file delete kar do.
+
+3) Browser mein https://metropuf.com kholo
+   → "Create your admin password" aayega → apna password banao.
+   (Ye turant karna — jo pehle password banata hai wahi admin hai.)
+
+4) SSL: hPanel → Websites → metropuf.com → Security → SSL → Install (free).
+   Facebook/Instagram/LinkedIn/X login aur Telegram ke liye https zaroori hai.
+
+5) Cron (sirf Schedule aur RSS triggers ke liye):
+   hPanel → Advanced → Cron Jobs → "PHP" chuno →
+   command: FlowForge ke Setup page par jo dikhe wahi copy karo
+   (jaise: public_html/cron.php) → Every 5 minutes → Save.
+
+6) Accounts connect karo: FlowForge → Integrations
+   - Turant (token paste): Telegram, Bluesky, Mastodon, Discord, Slack,
+     WhatsApp, Email (Resend), Notion, Airtable, Claude AI
+   - Facebook/Instagram/Threads/LinkedIn/X/Pinterest/Google:
+     Setup page → "Social app keys" → har platform ke steps follow karo,
+     redirect URL copy karke us platform ke developer app mein daalo,
+     App ID + Secret Setup page mein save karo → phir Integrations → Connect.
+
+Data kahan save hota hai: public_html/data/ (web se direct nahi khulta).
+Backup: data/ folder download kar lo.

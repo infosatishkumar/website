@@ -1,0 +1,1027 @@
+{
+ "apps": [
+  {
+   "key": "webhook",
+   "name": "Webhooks",
+   "icon": "↔",
+   "color": "#ececff",
+   "category": "Core",
+   "desc": "Start a workflow from any website, form or app that can send an HTTP request.",
+   "auth": "none",
+   "triggers": [
+    {
+     "key": "catch",
+     "label": "Catch webhook",
+     "desc": "Runs when JSON, form data or query params hit this workflow's unique URL.",
+     "fields": []
+    }
+   ]
+  },
+  {
+   "key": "schedule",
+   "name": "Schedule",
+   "icon": "◷",
+   "color": "#fff1d9",
+   "category": "Core",
+   "desc": "Run a workflow every few minutes, hours or days.",
+   "auth": "none",
+   "triggers": [
+    {
+     "key": "every",
+     "label": "Every N minutes",
+     "desc": "Fires on the cron tick once the interval has passed.",
+     "fields": [
+      {
+       "key": "minutes",
+       "label": "Interval (minutes)",
+       "type": "number",
+       "required": true,
+       "default": "60"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "rss",
+   "name": "RSS / Blog feed",
+   "icon": "◉",
+   "color": "#ffe9dc",
+   "category": "Core",
+   "desc": "Trigger on new items in an RSS or Atom feed (blogs, YouTube channels, news).",
+   "auth": "none",
+   "triggers": [
+    {
+     "key": "new_item",
+     "label": "New item in feed",
+     "desc": "Checked on every cron tick. Output: title, link, description, published, id.",
+     "fields": [
+      {
+       "key": "feedUrl",
+       "label": "Feed URL",
+       "type": "url",
+       "required": true,
+       "placeholder": "https://example.com/feed.xml",
+       "help": "YouTube channel feed: https://www.youtube.com/feeds/videos.xml?channel_id=…"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "http",
+   "name": "HTTP Request",
+   "icon": "⇄",
+   "color": "#e6f0ff",
+   "category": "Core",
+   "desc": "Call any REST API — CRMs, n8n, Make, your own backend.",
+   "auth": "none",
+   "actions": [
+    {
+     "key": "request",
+     "label": "Send HTTP request",
+     "desc": "Output: status, headers, body (parsed JSON when possible).",
+     "fields": [
+      {
+       "key": "method",
+       "label": "Method",
+       "type": "select",
+       "options": [
+        "POST",
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE"
+       ],
+       "default": "POST"
+      },
+      {
+       "key": "url",
+       "label": "URL",
+       "type": "url",
+       "required": true
+      },
+      {
+       "key": "headers",
+       "label": "Headers (JSON)",
+       "type": "json",
+       "placeholder": "{\"Authorization\":\"Bearer …\"}"
+      },
+      {
+       "key": "body",
+       "label": "Body",
+       "type": "textarea",
+       "placeholder": "{\"name\":\"{{trigger.name}}\"}"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "filter",
+   "name": "Filter",
+   "icon": "⑂",
+   "color": "#fff1d9",
+   "category": "Core",
+   "desc": "Only continue when a condition is true.",
+   "auth": "none",
+   "actions": [
+    {
+     "key": "only_if",
+     "label": "Only continue if…",
+     "desc": "Stops the run (status: filtered) when the condition fails.",
+     "fields": [
+      {
+       "key": "left",
+       "label": "Value",
+       "required": true,
+       "placeholder": "{{trigger.email}}"
+      },
+      {
+       "key": "operator",
+       "label": "Condition",
+       "type": "select",
+       "options": [
+        "exists",
+        "does not exist",
+        "equals",
+        "does not equal",
+        "contains",
+        "does not contain",
+        "greater than",
+        "less than"
+       ],
+       "default": "exists"
+      },
+      {
+       "key": "right",
+       "label": "Compare to",
+       "placeholder": "Leave empty for exists checks"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "formatter",
+   "name": "Formatter",
+   "icon": "Aa",
+   "color": "#f0f0f0",
+   "category": "Core",
+   "desc": "Compose text from earlier steps, trim it to a length, or add today's date.",
+   "auth": "none",
+   "actions": [
+    {
+     "key": "compose",
+     "label": "Compose text",
+     "desc": "Output: text, length.",
+     "fields": [
+      {
+       "key": "template",
+       "label": "Text",
+       "type": "textarea",
+       "required": true,
+       "placeholder": "New post: {{trigger.title}} {{trigger.link}}"
+      },
+      {
+       "key": "maxLength",
+       "label": "Max length (optional)",
+       "type": "number",
+       "placeholder": "280"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "claude",
+   "name": "Claude AI",
+   "icon": "✳",
+   "color": "#f8e6dc",
+   "category": "AI",
+   "desc": "Write captions, summarise leads, translate or classify text with Claude.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "apiKey",
+     "label": "Anthropic API key",
+     "type": "password",
+     "required": true
+    }
+   ],
+   "authHelp": "Create a key at console.anthropic.com → API keys.",
+   "actions": [
+    {
+     "key": "generate",
+     "label": "Generate text",
+     "desc": "Output: text.",
+     "fields": [
+      {
+       "key": "prompt",
+       "label": "Prompt",
+       "type": "textarea",
+       "required": true,
+       "placeholder": "Write a short Instagram caption for: {{trigger.title}}"
+      },
+      {
+       "key": "system",
+       "label": "Instructions (optional)",
+       "type": "textarea",
+       "placeholder": "Reply with the caption only."
+      },
+      {
+       "key": "model",
+       "label": "Model",
+       "type": "select",
+       "options": [
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-5-5"
+       ],
+       "default": "claude-opus-5-5"
+      },
+      {
+       "key": "effort",
+       "label": "Effort",
+       "type": "select",
+       "options": [
+        "low",
+        "medium",
+        "high"
+       ],
+       "default": "low"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "facebook",
+   "name": "Facebook Pages",
+   "icon": "f",
+   "color": "#e7edff",
+   "category": "Social",
+   "desc": "Publish posts and links to Facebook Pages you manage.",
+   "auth": "oauth",
+   "oauth": "meta",
+   "actions": [
+    {
+     "key": "page_post",
+     "label": "Create Page post",
+     "desc": "Output: id of the new post.",
+     "fields": [
+      {
+       "key": "pageId",
+       "label": "Page",
+       "type": "select",
+       "optionsFrom": "pages",
+       "required": true
+      },
+      {
+       "key": "message",
+       "label": "Message",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "link",
+       "label": "Link (optional)",
+       "type": "url"
+      },
+      {
+       "key": "imageUrl",
+       "label": "Image URL (optional)",
+       "type": "url",
+       "help": "Posts a photo instead of a text post. Must be publicly reachable."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "instagram",
+   "name": "Instagram",
+   "icon": "◎",
+   "color": "#ffe6f2",
+   "category": "Social",
+   "desc": "Publish photos with captions to an Instagram professional account.",
+   "auth": "oauth",
+   "oauth": "instagram",
+   "actions": [
+    {
+     "key": "publish_photo",
+     "label": "Publish photo",
+     "desc": "Output: id of the published media.",
+     "fields": [
+      {
+       "key": "imageUrl",
+       "label": "Image URL (JPEG)",
+       "type": "url",
+       "required": true,
+       "help": "Instagram downloads the image, so it must be public."
+      },
+      {
+       "key": "caption",
+       "label": "Caption",
+       "type": "textarea"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "threads",
+   "name": "Threads",
+   "icon": "@",
+   "color": "#ececec",
+   "category": "Social",
+   "desc": "Post text or images to Threads.",
+   "auth": "oauth",
+   "oauth": "threads",
+   "actions": [
+    {
+     "key": "create_post",
+     "label": "Create post",
+     "desc": "Output: id. Text limit 500 characters.",
+     "fields": [
+      {
+       "key": "text",
+       "label": "Text",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "imageUrl",
+       "label": "Image URL (optional)",
+       "type": "url"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "linkedin",
+   "name": "LinkedIn",
+   "icon": "in",
+   "color": "#e2eefb",
+   "category": "Social",
+   "desc": "Share posts on your LinkedIn profile.",
+   "auth": "oauth",
+   "oauth": "linkedin",
+   "actions": [
+    {
+     "key": "create_post",
+     "label": "Create post",
+     "desc": "Output: id (urn) of the post.",
+     "fields": [
+      {
+       "key": "text",
+       "label": "Text",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "visibility",
+       "label": "Visibility",
+       "type": "select",
+       "options": [
+        "PUBLIC",
+        "CONNECTIONS"
+       ],
+       "default": "PUBLIC"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "x",
+   "name": "X (Twitter)",
+   "icon": "𝕏",
+   "color": "#ededed",
+   "category": "Social",
+   "desc": "Post to X. Requires X API credits (pay-per-use).",
+   "auth": "oauth",
+   "oauth": "x",
+   "actions": [
+    {
+     "key": "create_post",
+     "label": "Create post",
+     "desc": "Output: id, text.",
+     "fields": [
+      {
+       "key": "text",
+       "label": "Text",
+       "type": "textarea",
+       "required": true,
+       "help": "280 characters on standard accounts."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "pinterest",
+   "name": "Pinterest",
+   "icon": "P",
+   "color": "#ffe5e5",
+   "category": "Social",
+   "desc": "Create Pins on your boards.",
+   "auth": "oauth",
+   "oauth": "pinterest",
+   "actions": [
+    {
+     "key": "create_pin",
+     "label": "Create Pin",
+     "desc": "Output: id of the Pin.",
+     "fields": [
+      {
+       "key": "boardId",
+       "label": "Board",
+       "type": "select",
+       "optionsFrom": "boards",
+       "required": true
+      },
+      {
+       "key": "imageUrl",
+       "label": "Image URL",
+       "type": "url",
+       "required": true
+      },
+      {
+       "key": "title",
+       "label": "Title"
+      },
+      {
+       "key": "description",
+       "label": "Description",
+       "type": "textarea"
+      },
+      {
+       "key": "link",
+       "label": "Destination link",
+       "type": "url"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "bluesky",
+   "name": "Bluesky",
+   "icon": "🦋",
+   "color": "#e3f0ff",
+   "category": "Social",
+   "desc": "Post to Bluesky. Connects instantly with an app password.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "identifier",
+     "label": "Handle",
+     "required": true,
+     "placeholder": "you.bsky.social"
+    },
+    {
+     "key": "appPassword",
+     "label": "App password",
+     "type": "password",
+     "required": true
+    },
+    {
+     "key": "service",
+     "label": "PDS (optional)",
+     "type": "url",
+     "placeholder": "https://bsky.social"
+    }
+   ],
+   "authHelp": "Bluesky → Settings → Privacy and security → App passwords → Add.",
+   "actions": [
+    {
+     "key": "create_post",
+     "label": "Create post",
+     "desc": "Links in the text become clickable. Output: uri, cid.",
+     "fields": [
+      {
+       "key": "text",
+       "label": "Text",
+       "type": "textarea",
+       "required": true,
+       "help": "300 characters max."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mastodon",
+   "name": "Mastodon",
+   "icon": "M",
+   "color": "#ece8ff",
+   "category": "Social",
+   "desc": "Post statuses to any Mastodon server.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "instance",
+     "label": "Server URL",
+     "type": "url",
+     "required": true,
+     "placeholder": "https://mastodon.social"
+    },
+    {
+     "key": "accessToken",
+     "label": "Access token",
+     "type": "password",
+     "required": true
+    }
+   ],
+   "authHelp": "Preferences → Development → New application (scope write:statuses) → copy the access token.",
+   "actions": [
+    {
+     "key": "post_status",
+     "label": "Post status",
+     "desc": "Output: id, url.",
+     "fields": [
+      {
+       "key": "status",
+       "label": "Text",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "visibility",
+       "label": "Visibility",
+       "type": "select",
+       "options": [
+        "public",
+        "unlisted",
+        "private"
+       ],
+       "default": "public"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "telegram",
+   "name": "Telegram",
+   "icon": "✈",
+   "color": "#e1f3fc",
+   "category": "Messaging",
+   "desc": "Bots that send messages to chats/channels, or react to incoming messages.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "botToken",
+     "label": "Bot token",
+     "type": "password",
+     "required": true,
+     "placeholder": "123456:ABC-…"
+    }
+   ],
+   "authHelp": "Message @BotFather on Telegram → /newbot → copy the token. Add the bot to your channel as admin to post there.",
+   "triggers": [
+    {
+     "key": "new_message",
+     "label": "New message to bot",
+     "desc": "FlowForge registers the bot's webhook when the workflow is turned on. Output: message.text, message.chat.id, message.from…",
+     "fields": []
+    }
+   ],
+   "actions": [
+    {
+     "key": "send_message",
+     "label": "Send message",
+     "desc": "Output: message_id.",
+     "fields": [
+      {
+       "key": "chatId",
+       "label": "Chat ID or @channel",
+       "required": true,
+       "placeholder": "@mychannel or {{trigger.message.chat.id}}"
+      },
+      {
+       "key": "text",
+       "label": "Text",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "parseMode",
+       "label": "Formatting",
+       "type": "select",
+       "options": [
+        "none",
+        "HTML",
+        "MarkdownV2"
+       ],
+       "default": "none"
+      }
+     ]
+    },
+    {
+     "key": "send_photo",
+     "label": "Send photo",
+     "desc": "Output: message_id.",
+     "fields": [
+      {
+       "key": "chatId",
+       "label": "Chat ID or @channel",
+       "required": true
+      },
+      {
+       "key": "photoUrl",
+       "label": "Photo URL",
+       "type": "url",
+       "required": true
+      },
+      {
+       "key": "caption",
+       "label": "Caption",
+       "type": "textarea"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "whatsapp",
+   "name": "WhatsApp Business",
+   "icon": "✆",
+   "color": "#e1f7e9",
+   "category": "Messaging",
+   "desc": "Send WhatsApp messages through the Meta Cloud API.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "accessToken",
+     "label": "Access token",
+     "type": "password",
+     "required": true,
+     "help": "Use a System User permanent token for production."
+    },
+    {
+     "key": "phoneNumberId",
+     "label": "Phone number ID",
+     "required": true
+    }
+   ],
+   "authHelp": "developers.facebook.com → your app → WhatsApp → API Setup shows both values.",
+   "actions": [
+    {
+     "key": "send_template",
+     "label": "Send template message",
+     "desc": "Works any time. Output: messages[0].id.",
+     "fields": [
+      {
+       "key": "to",
+       "label": "To (with country code)",
+       "required": true,
+       "placeholder": "919876543210"
+      },
+      {
+       "key": "template",
+       "label": "Template name",
+       "required": true,
+       "placeholder": "hello_world"
+      },
+      {
+       "key": "language",
+       "label": "Language code",
+       "default": "en_US"
+      },
+      {
+       "key": "params",
+       "label": "Body variables (one per line)",
+       "type": "textarea",
+       "placeholder": "{{trigger.name}}"
+      }
+     ]
+    },
+    {
+     "key": "send_text",
+     "label": "Send text message",
+     "desc": "Only within 24h of the customer's last message.",
+     "fields": [
+      {
+       "key": "to",
+       "label": "To (with country code)",
+       "required": true
+      },
+      {
+       "key": "body",
+       "label": "Message",
+       "type": "textarea",
+       "required": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "discord",
+   "name": "Discord",
+   "icon": "◈",
+   "color": "#e8e9ff",
+   "category": "Messaging",
+   "desc": "Post into a Discord channel via webhook.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "webhookUrl",
+     "label": "Channel webhook URL",
+     "type": "url",
+     "required": true
+    }
+   ],
+   "authHelp": "Channel settings → Integrations → Webhooks → New webhook → Copy URL.",
+   "actions": [
+    {
+     "key": "send_message",
+     "label": "Send message",
+     "desc": "Output: id.",
+     "fields": [
+      {
+       "key": "content",
+       "label": "Message",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "username",
+       "label": "Bot name (optional)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "slack",
+   "name": "Slack",
+   "icon": "#",
+   "color": "#f8e8ff",
+   "category": "Messaging",
+   "desc": "Post to a Slack channel via incoming webhook.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "webhookUrl",
+     "label": "Incoming webhook URL",
+     "type": "url",
+     "required": true
+    }
+   ],
+   "authHelp": "api.slack.com/apps → Create app → Incoming Webhooks → Add New Webhook to Workspace.",
+   "actions": [
+    {
+     "key": "send_message",
+     "label": "Send message",
+     "desc": "Supports Slack mrkdwn.",
+     "fields": [
+      {
+       "key": "text",
+       "label": "Message",
+       "type": "textarea",
+       "required": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "email",
+   "name": "Email (Resend)",
+   "icon": "✉",
+   "color": "#ffe8e8",
+   "category": "Messaging",
+   "desc": "Send transactional email through Resend.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "apiKey",
+     "label": "Resend API key",
+     "type": "password",
+     "required": true
+    },
+    {
+     "key": "from",
+     "label": "From address",
+     "required": true,
+     "placeholder": "FlowForge <alerts@yourdomain.com>"
+    }
+   ],
+   "authHelp": "resend.com → API Keys. Verify your domain to send from it.",
+   "actions": [
+    {
+     "key": "send",
+     "label": "Send email",
+     "desc": "Output: id.",
+     "fields": [
+      {
+       "key": "to",
+       "label": "To",
+       "required": true,
+       "placeholder": "a@b.com, c@d.com"
+      },
+      {
+       "key": "subject",
+       "label": "Subject",
+       "required": true
+      },
+      {
+       "key": "html",
+       "label": "Body (HTML or text)",
+       "type": "textarea",
+       "required": true
+      },
+      {
+       "key": "replyTo",
+       "label": "Reply-to (optional)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "google_sheets",
+   "name": "Google Sheets",
+   "icon": "▦",
+   "color": "#e4f7e9",
+   "category": "Productivity",
+   "desc": "Append rows to a spreadsheet.",
+   "auth": "oauth",
+   "oauth": "google",
+   "actions": [
+    {
+     "key": "append_row",
+     "label": "Append row",
+     "desc": "Output: updates.updatedRange.",
+     "fields": [
+      {
+       "key": "spreadsheetId",
+       "label": "Spreadsheet ID",
+       "required": true,
+       "help": "The long id in the sheet URL: /spreadsheets/d/<ID>/edit"
+      },
+      {
+       "key": "sheet",
+       "label": "Sheet (tab) name",
+       "default": "Sheet1"
+      },
+      {
+       "key": "values",
+       "label": "Columns (one per line)",
+       "type": "textarea",
+       "required": true,
+       "placeholder": "{{trigger.name}}\n{{trigger.email}}\n{{trigger.phone}}"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "notion",
+   "name": "Notion",
+   "icon": "N",
+   "color": "#f1f1ef",
+   "category": "Productivity",
+   "desc": "Create pages in a Notion database.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "token",
+     "label": "Internal integration secret",
+     "type": "password",
+     "required": true
+    }
+   ],
+   "authHelp": "notion.so/my-integrations → New integration → copy secret. Then share the database with the integration.",
+   "actions": [
+    {
+     "key": "create_page",
+     "label": "Create database page",
+     "desc": "Output: id, url.",
+     "fields": [
+      {
+       "key": "databaseId",
+       "label": "Database ID",
+       "required": true
+      },
+      {
+       "key": "titleProperty",
+       "label": "Title property name",
+       "default": "Name"
+      },
+      {
+       "key": "title",
+       "label": "Title",
+       "required": true
+      },
+      {
+       "key": "content",
+       "label": "Page text (optional)",
+       "type": "textarea"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "airtable",
+   "name": "Airtable",
+   "icon": "▤",
+   "color": "#fff6d6",
+   "category": "Productivity",
+   "desc": "Create records in an Airtable base.",
+   "auth": "token",
+   "authFields": [
+    {
+     "key": "token",
+     "label": "Personal access token",
+     "type": "password",
+     "required": true
+    }
+   ],
+   "authHelp": "airtable.com/create/tokens → scope data.records:write + access to your base.",
+   "actions": [
+    {
+     "key": "create_record",
+     "label": "Create record",
+     "desc": "Output: id, fields.",
+     "fields": [
+      {
+       "key": "baseId",
+       "label": "Base ID",
+       "required": true,
+       "placeholder": "app…"
+      },
+      {
+       "key": "table",
+       "label": "Table name or ID",
+       "required": true
+      },
+      {
+       "key": "fields",
+       "label": "Fields (JSON)",
+       "type": "json",
+       "required": true,
+       "placeholder": "{\"Name\":\"{{trigger.name}}\",\"Email\":\"{{trigger.email}}\"}"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "providers": {
+  "meta": {
+   "name": "Meta (Facebook Pages)",
+   "idEnv": "META_APP_ID",
+   "secretEnv": "META_APP_SECRET",
+   "consoleUrl": "https://developers.facebook.com/apps",
+   "steps": "Create app (type Business) → add Facebook Login for Business → Valid OAuth Redirect URIs → request pages_show_list, pages_manage_posts, pages_read_engagement."
+  },
+  "instagram": {
+   "name": "Instagram",
+   "idEnv": "INSTAGRAM_APP_ID",
+   "secretEnv": "INSTAGRAM_APP_SECRET",
+   "consoleUrl": "https://developers.facebook.com/apps",
+   "steps": "In your Meta app add Instagram → API setup with Instagram login → Business login settings → add the redirect URL. Use the Instagram app ID/secret shown there."
+  },
+  "threads": {
+   "name": "Threads",
+   "idEnv": "THREADS_APP_ID",
+   "secretEnv": "THREADS_APP_SECRET",
+   "consoleUrl": "https://developers.facebook.com/apps",
+   "steps": "Create app with the Threads API use case → Settings → add the redirect callback URL. Add yourself as a Threads tester until App Review is done."
+  },
+  "linkedin": {
+   "name": "LinkedIn",
+   "idEnv": "LINKEDIN_CLIENT_ID",
+   "secretEnv": "LINKEDIN_CLIENT_SECRET",
+   "consoleUrl": "https://www.linkedin.com/developers/apps",
+   "steps": "Create app → Products: add 'Sign In with LinkedIn using OpenID Connect' and 'Share on LinkedIn' → Auth tab → add the redirect URL."
+  },
+  "x": {
+   "name": "X",
+   "idEnv": "X_CLIENT_ID",
+   "secretEnv": "X_CLIENT_SECRET",
+   "consoleUrl": "https://developer.x.com/en/portal/dashboard",
+   "steps": "Project → App → User authentication settings: OAuth 2.0, type Web App, permissions Read and write, callback = redirect URL. Copy the OAuth 2.0 Client ID and Secret. Add credits for posting."
+  },
+  "google": {
+   "name": "Google",
+   "idEnv": "GOOGLE_CLIENT_ID",
+   "secretEnv": "GOOGLE_CLIENT_SECRET",
+   "consoleUrl": "https://console.cloud.google.com/apis/credentials",
+   "steps": "Enable Google Sheets API → OAuth consent screen → Credentials → OAuth client ID (Web application) → Authorized redirect URI = redirect URL."
+  },
+  "pinterest": {
+   "name": "Pinterest",
+   "idEnv": "PINTEREST_APP_ID",
+   "secretEnv": "PINTEREST_APP_SECRET",
+   "consoleUrl": "https://developers.pinterest.com/apps/",
+   "steps": "Connect app → add the redirect URI. Trial access can create Pins on your own account."
+  }
+ }
+}

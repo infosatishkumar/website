@@ -43,3 +43,7 @@ next-env.d.ts
 
 # flowforge local data
 /.flowforge/
+
+# FlowForge PHP runtime data
+/hostinger-php/data/*.php
+!/hostinger-php/data/index.php
