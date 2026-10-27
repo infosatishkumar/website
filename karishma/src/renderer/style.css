@@ -1,0 +1,222 @@
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Helvetica Neue', sans-serif;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#karishma {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 200px;
+  height: 300px;
+  transform-origin: 0 0;
+  pointer-events: auto;
+  cursor: grab;
+  will-change: transform;
+}
+
+#karishma.dragging {
+  cursor: grabbing;
+}
+
+#body,
+.k-svg,
+.k-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.k-svg {
+  filter: drop-shadow(0 2px 3px rgba(40, 10, 40, 0.25));
+}
+
+.k-main { fill: var(--k-main, #1fa39a); }
+.k-dark { fill: var(--k-dark, #137067); }
+.k-sash { fill: var(--k-sash, #ff6f91); }
+.k-trim { fill: var(--k-trim, #f6c453); }
+.k-trim-stroke { stroke: var(--k-trim, #f6c453); }
+.k-legging { fill: #fff3e6; }
+.k-shoe { fill: var(--k-trim, #f6c453); stroke: #b9822a; stroke-width: 0.8; }
+.k-jhumka { fill: #f6c453; stroke: #b9822a; stroke-width: 0.5; }
+.k-flower circle { fill: #ff8fb8; }
+
+/* Speech bubble */
+#bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 280px;
+  min-width: 60px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #3a2340;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 6px 22px rgba(80, 20, 70, 0.25);
+  border: 2px solid #ffc2da;
+  pointer-events: auto;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.18s ease;
+  word-wrap: break-word;
+}
+
+#bubbleText {
+  white-space: pre-wrap;
+}
+
+#bubble.side {
+  transform: translate(0, -50%);
+}
+
+#bubble.side::after {
+  display: none;
+}
+
+#bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-right: 2px solid #ffc2da;
+  border-bottom: 2px solid #ffc2da;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+#bubble.hidden,
+#chat.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#bubble.alarm {
+  border-color: #ff6f91;
+  animation: wiggle 0.6s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: translate(-50%, -100%) rotate(0); }
+  25% { transform: translate(-50%, -100%) rotate(-2deg); }
+  75% { transform: translate(-50%, -100%) rotate(2deg); }
+}
+
+#bubbleButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#bubbleButtons:empty {
+  display: none;
+}
+
+#bubbleButtons button {
+  flex: 1;
+  border: 0;
+  border-radius: 12px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 600;
+  background: #ffe1ec;
+  color: #b2365a;
+  cursor: pointer;
+}
+
+#bubbleButtons button.primary {
+  background: #ff6f91;
+  color: #fff;
+}
+
+.dots::after {
+  content: '';
+  animation: dots 1.2s steps(4) infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+/* Chat input */
+#chat {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  width: 280px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  transition: opacity 0.18s ease;
+}
+
+#chat input {
+  flex: 1;
+  border: 2px solid #ffc2da;
+  border-radius: 16px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.97);
+  color: #3a2340;
+  box-shadow: 0 6px 18px rgba(80, 20, 70, 0.2);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#chat input:focus {
+  border-color: #ff6f91;
+}
+
+#chat button {
+  border: 0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  background: #ff6f91;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(80, 20, 70, 0.2);
+}
+
+/* Floating particles (hearts, zzz, notes, water) */
+.particle {
+  position: absolute;
+  pointer-events: none;
+  font-size: 22px;
+  animation: floatUp 1.6s ease-out forwards;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.particle.zzz {
+  font-weight: 800;
+  color: #7b5cd6;
+  font-size: 18px;
+  animation-duration: 2.4s;
+}
+
+@keyframes floatUp {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), -90px) scale(1.15); }
+}

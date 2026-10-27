@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Karishma desktop app (Electron) has its own tooling
+    "karishma/**",
   ]),
 ]);
 

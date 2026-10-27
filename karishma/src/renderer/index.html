@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Karishma</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../node_modules/three/build/three.module.js",
+          "three/addons/": "../../node_modules/three/examples/jsm/",
+          "@pixiv/three-vrm": "../../node_modules/@pixiv/three-vrm/lib/three-vrm.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="karishma"><div id="body"></div></div>
+      <div id="bubble" class="hidden">
+        <div id="bubbleText"></div>
+        <div id="bubbleButtons"></div>
+      </div>
+      <form id="chat" class="hidden" autocomplete="off">
+        <input id="chatInput" type="text" maxlength="2000" placeholder="Karishma se kuch bolo…" />
+        <button type="submit" aria-label="Send">➤</button>
+      </form>
+    </div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

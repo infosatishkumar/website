@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Karishma Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">K</div>
+      <div>
+        <h1>Karishma</h1>
+        <p>Tumhari desktop dost — settings</p>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>🧠 Brain (Claude AI)</h2>
+        <label class="field">
+          <span>Claude API key</span>
+          <div class="row">
+            <input id="anthropicKey" type="password" placeholder="sk-ant-…" autocomplete="off" />
+            <button data-save-secret="anthropicKey">Save</button>
+          </div>
+          <small id="anthropicKeyStatus"></small>
+          <small>Key <a href="https://platform.claude.com/settings/keys" target="_blank">platform.claude.com</a> se milegi. Mac Keychain mein encrypted save hoti hai.</small>
+        </label>
+        <label class="field">
+          <span>Model</span>
+          <select data-setting="model">
+            <option value="claude-opus-5-5">Claude Opus 5.5 — sabse smart</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5 — fast + smart</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5 — sabse fast, sasta</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Tumhara naam</span>
+          <input data-setting="userName" type="text" placeholder="Satish" />
+        </label>
+        <label class="field">
+          <span>Bhasha</span>
+          <select data-setting="language">
+            <option value="hinglish">Hinglish</option>
+            <option value="hindi">हिंदी</option>
+            <option value="english">English</option>
+          </select>
+        </label>
+        <div class="field">
+          <span>Karishma ko yaad hai</span>
+          <ul id="memories" class="list"></ul>
+          <div class="row">
+            <button id="resetChat" class="ghost">Nayi conversation shuru karo</button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>🎙️ Voice</h2>
+        <label class="toggle"><input type="checkbox" data-setting="voiceEnabled" /> Karishma bolkar jawab de</label>
+        <label class="field">
+          <span>Voice engine</span>
+          <select data-setting="voiceProvider">
+            <option value="elevenlabs">ElevenLabs (natural voice)</option>
+            <option value="system">Mac system voice (free, offline)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>ElevenLabs API key</span>
+          <div class="row">
+            <input id="elevenKey" type="password" placeholder="sk_…" autocomplete="off" />
+            <button data-save-secret="elevenKey">Save</button>
+          </div>
+          <small id="elevenKeyStatus"></small>
+        </label>
+        <label class="field">
+          <span>ElevenLabs voice</span>
+          <div class="row">
+            <select id="voiceSelect"></select>
+            <button id="loadVoices" class="ghost">Load voices</button>
+          </div>
+          <input data-setting="elevenVoiceId" type="text" placeholder="Voice ID" />
+        </label>
+        <label class="field">
+          <span>ElevenLabs model</span>
+          <select data-setting="elevenModel">
+            <option value="eleven_flash_v2_5">Flash v2.5 — fast, Hindi support</option>
+            <option value="eleven_multilingual_v2">Multilingual v2 — best quality</option>
+            <option value="eleven_v3">Eleven v3 — most expressive</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Volume</span>
+          <input data-setting="volume" type="range" min="0" max="1" step="0.05" />
+        </label>
+        <button id="testVoice" class="ghost">🔊 Test voice</button>
+      </section>
+
+      <section>
+        <h2>👗 Look</h2>
+        <label class="field">
+          <span>Size</span>
+          <input data-setting="scale" type="range" min="0.45" max="1.6" step="0.05" />
+        </label>
+        <label class="field">
+          <span>Outfit</span>
+          <select data-setting="outfit">
+            <option value="teal">Teal kurta</option>
+            <option value="rose">Rose kurta</option>
+            <option value="violet">Violet kurta</option>
+            <option value="saffron">Saffron kurta</option>
+            <option value="midnight">Midnight kurta</option>
+          </select>
+        </label>
+        <div class="field">
+          <span>3D model (VRM)</span>
+          <small id="vrmPath">Built-in 2D Karishma</small>
+          <div class="row">
+            <button id="pickVrm" class="ghost">Choose .vrm file…</button>
+            <button id="clearVrm" class="ghost">Use built-in</button>
+          </div>
+          <small>VRoid Studio se apna 3D character banao ya VRoid Hub se free model download karo.</small>
+        </div>
+      </section>
+
+      <section>
+        <h2>🐾 Behaviour</h2>
+        <label class="toggle"><input type="checkbox" data-setting="walkAround" /> Screen pe ghoomti rahe</label>
+        <label class="toggle"><input type="checkbox" data-setting="sitOnWindows" /> Windows ke upar baithe</label>
+        <label class="toggle"><input type="checkbox" data-setting="followCursor" /> Mouse cursor ka peecha kare</label>
+        <label class="toggle"><input type="checkbox" data-setting="sleepWhenIdle" /> Tum door ho toh so jaaye</label>
+        <label class="toggle"><input type="checkbox" data-setting="chatty" /> Kabhi kabhi khud se baat kare</label>
+      </section>
+
+      <section>
+        <h2>⏰ Alarms &amp; reminders</h2>
+        <ul id="alarms" class="list"></ul>
+        <div class="row">
+          <input id="alarmTime" type="time" value="07:00" />
+          <input id="alarmLabel" type="text" placeholder="Label (e.g. Gym time!)" />
+          <button id="addAlarm">Add</button>
+        </div>
+        <div class="days" id="alarmDays"></div>
+        <label class="field">
+          <span>Paani yaad dilaye (minutes, 0 = off)</span>
+          <input data-setting="hydrationMinutes" type="number" min="0" max="600" />
+        </label>
+        <label class="field">
+          <span>Break yaad dilaye (minutes, 0 = off)</span>
+          <input data-setting="breakMinutes" type="number" min="0" max="600" />
+        </label>
+        <label class="toggle"><input type="checkbox" data-setting="hourlyChime" /> Har ghante time bataye</label>
+      </section>
+
+      <section>
+        <h2>💻 System</h2>
+        <label class="toggle"><input type="checkbox" data-setting="launchAtLogin" /> Mac start hote hi Karishma aa jaaye</label>
+        <label class="toggle"><input type="checkbox" data-setting="showInDock" /> Dock mein icon dikhao</label>
+        <small>Shortcuts: ⌘⇧K baat karo · ⌘⇧H chhupao/dikhao · Karishma pe right-click = menu</small>
+      </section>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

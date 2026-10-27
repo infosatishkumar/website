@@ -1,0 +1,40 @@
+{
+  "name": "karishma",
+  "productName": "Karishma",
+  "version": "1.0.0",
+  "description": "Karishma - an AI desktop companion that lives on your Mac desktop",
+  "main": "src/main.js",
+  "author": "Satish Kumar",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac dmg zip --x64",
+    "dist:arm": "electron-builder --mac dmg zip --arm64",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/brain.js && node --check src/store.js && node --check src/windowWatcher.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@pixiv/three-vrm": "^3.5.5",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "in.satishkumar.karishma",
+    "productName": "Karishma",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "icon": "build/icon.png",
+      "target": ["dmg", "zip"],
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSAppleEventsUsageDescription": "Karishma uses this to see where your windows are, so she can sit on top of them."
+      }
+    }
+  }
+}

@@ -1,0 +1,213 @@
+:root {
+  --pink: #ff6f91;
+  --pink-soft: #ffe1ec;
+  --ink: #3a2340;
+  --muted: #8a6f8f;
+  --bg: #fff7fb;
+  --card: #ffffff;
+  --line: #f6d3e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f6e9f3;
+    --muted: #b8a2bb;
+    --bg: #1d1520;
+    --card: #2a1f2e;
+    --line: #47334d;
+    --pink-soft: #4a2638;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 38px 24px 14px;
+  -webkit-app-region: drag;
+}
+
+.logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6f91, #7b5cd6);
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+main {
+  padding: 0 24px 32px;
+  display: grid;
+  gap: 14px;
+}
+
+section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field > span {
+  font-weight: 600;
+}
+
+small {
+  color: var(--muted);
+}
+
+a {
+  color: var(--pink);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.row > input[type='text'],
+.row > input[type='password'],
+.row > select {
+  flex: 1;
+}
+
+input[type='text'],
+input[type='password'],
+input[type='number'],
+input[type='time'],
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 10px;
+  outline: none;
+  min-width: 0;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--pink);
+}
+
+input[type='range'] {
+  accent-color: var(--pink);
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 14px;
+  background: var(--pink);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.ghost {
+  background: var(--pink-soft);
+  color: var(--pink);
+}
+
+.toggle {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.toggle input {
+  accent-color: var(--pink);
+  width: 16px;
+  height: 16px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.list li .grow {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.list li button {
+  padding: 3px 9px;
+}
+
+.list .empty {
+  color: var(--muted);
+  justify-content: center;
+}
+
+.days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.days label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--pink-soft);
+  cursor: pointer;
+}
