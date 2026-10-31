@@ -1,0 +1,15 @@
+# Karishma overrides for ~/.openjarvis/config.toml
+# install-karishma.sh merges these in for you.
+
+[agent]
+system_prompt_path = "~/.openjarvis/karishma_system_prompt.md"
+
+[speech]
+tts_backend = "elevenlabs"
+# ElevenLabs voice "Monika Sogam" (female, Indian English), from your voice collection
+voice_id = "2zRM7PkgwBPiau2jvVXc"
+voice_speed = 1.0
+
+[digest]
+honorific = "sir"
+voice_id = "2zRM7PkgwBPiau2jvVXc"
