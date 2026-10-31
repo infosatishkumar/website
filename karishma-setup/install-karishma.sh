@@ -21,7 +21,7 @@ if ! command -v jarvis >/dev/null 2>&1; then
 fi
 
 # 3. Desktop source checkout (for `jarvis gui`)
-[[ -d "$HOME/Desktop/OpenJarvis" ]] || git clone https://github.com/open-jarvis/OpenJarvis.git "$HOME/Desktop/OpenJarvis"
+[[ -d "$HOME/Desktop/OpenJarvis" ]] || git clone --depth 1 https://github.com/open-jarvis/OpenJarvis.git "$HOME/Desktop/OpenJarvis"
 
 # 4. Karishma persona + voice
 mkdir -p "$CFG"
