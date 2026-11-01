@@ -91,7 +91,7 @@ cat > "$HOME/Desktop/Karishma.command" <<'EOF'
 source "$HOME/.karishma.env" 2>/dev/null
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 clear; echo "Karishma - Enter dabake boliye, chup hone par wo sunegi. Band karne ke liye /quit"
-exec "$HOME/.openjarvis/.venv/bin/jarvis" chat --voice
+exec "$HOME/.openjarvis/.venv/bin/jarvis" chat --voice --skip-runtime-panel
 EOF
 chmod +x "$HOME/Desktop/Karishma.command"
 
