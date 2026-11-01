@@ -82,7 +82,7 @@ while true; do
   echo "ElevenLabs ne error diya (HTTP $code): $(head -c 300 /tmp/karishma_test.mp3)"
   echo "Key dobara check karke paste karein."
 done
-umask 077; printf 'export ELEVENLABS_API_KEY="%s"\n' "$KEY" > "$ENV_FILE"
+umask 077; printf 'export ELEVENLABS_API_KEY="%s"\nexport ELEVENLABS_MODEL="eleven_flash_v2_5"\n' "$KEY" > "$ENV_FILE"
 echo '[ -f "$HOME/.karishma.env" ] && source "$HOME/.karishma.env"' >> "$HOME/.zshrc"
 
 # Desktop launcher: double-click to talk to Karishma
