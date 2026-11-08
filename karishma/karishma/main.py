@@ -139,6 +139,9 @@ def run_voice(cfg: Config) -> None:
     mouth = Mouth(cfg)
     print("🎤 Mic calibrate ho raha hai... 1 second shaant rahiye.")
     ears = Ears(cfg)
+    if ears.mic_blocked:
+        print("❌ Microphone se sirf silence aa raha hai - permission nahi hai.\n"
+              "   System Settings > Privacy & Security > Microphone me Terminal ko ON kariye, phir Terminal restart kariye.")
     io = VoiceIO(mouth, ears)
     brain, browser = build(cfg, io)
     io.say(greeting(cfg))

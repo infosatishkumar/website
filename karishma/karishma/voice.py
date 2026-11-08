@@ -139,6 +139,7 @@ class Ears:
             raise RuntimeError("Voice mode needs ELEVENLABS_API_KEY (use --text for keyboard mode).")
         self._client = ElevenLabs(api_key=cfg.elevenlabs_api_key)
         self.threshold = 500.0
+        self.mic_blocked = False
         self.calibrate()
 
     def calibrate(self, seconds: float = 1.0) -> None:
@@ -148,6 +149,10 @@ class Ears:
         audio = sd.rec(int(seconds * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1, dtype="int16")
         sd.wait()
         noise = float(np.sqrt(np.mean(audio.astype(np.float32) ** 2)))
+        # macOS gives pure digital silence (all zeros) when microphone permission is denied.
+        self.mic_blocked = not np.any(audio)
+        if self.mic_blocked:
+            log.warning("microphone returns silence - permission probably denied")
         self.threshold = max(300.0, noise * 3.0)
         log.info("noise=%.0f threshold=%.0f", noise, self.threshold)
 

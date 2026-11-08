@@ -175,6 +175,15 @@ class KarishmaApp(rumps.App):
         mouth = StatusMouth(cfg, self)
         ears = Ears(cfg)
         io = VoiceIO(mouth, ears)
+        if ears.mic_blocked:
+            self.set_state("error", "Microphone permission chahiye")
+            mouth.speak("Satish ji, mujhe microphone ki permission nahi mili hai, isliye main sun nahi pa rahi. "
+                        "Settings khol rahi hoon, wahan Karishma ko ON kar dijiye.")
+            subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"])
+            while ears.mic_blocked and not self.stop:
+                time.sleep(5)
+                ears.calibrate()
+            mouth.speak("Shukriya! Ab main sun sakti hoon.")
         self.brain, browser = build(cfg, io)
         try:
             io.say(greeting(cfg))
