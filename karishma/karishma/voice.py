@@ -65,6 +65,7 @@ class Mouth:
         self._proc: subprocess.Popen | None = None
         self.speaking = False
         self.interrupted = False
+        self.last_end = 0.0
         if cfg.elevenlabs_api_key:
             from elevenlabs.client import ElevenLabs
 
@@ -108,6 +109,7 @@ class Mouth:
             self._speak(text)
         finally:
             self.speaking = False
+            self.last_end = time.time()
 
     def _speak(self, text: str) -> None:
         if self._client and self.cfg.elevenlabs_voice_id:
@@ -149,6 +151,25 @@ class Mouth:
             self._proc.wait()
         finally:
             self._proc = None
+
+
+_OUT_CACHE = {"t": 0.0, "speakers": True}
+
+
+def output_is_speakers() -> bool:
+    """True when sound plays from the laptop's own speakers (her voice echoes into the mic).
+    False for headphones / AirPods / external output, where instant barge-in is safe."""
+    now = time.time()
+    if now - _OUT_CACHE["t"] > 10:
+        _OUT_CACHE["t"] = now
+        try:
+            import sounddevice as sd
+
+            name = str(sd.query_devices(kind="output")["name"]).lower()
+            _OUT_CACHE["speakers"] = "speaker" in name or "built-in" in name
+        except Exception:  # noqa: BLE001
+            _OUT_CACHE["speakers"] = True
+    return _OUT_CACHE["speakers"]
 
 
 class Ears:

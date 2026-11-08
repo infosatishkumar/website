@@ -27,12 +27,12 @@ from tkinter import font as tkfont
 from tkinter import simpledialog
 
 from .config import load_config
-from .main import FOLLOW_UP_WINDOW, RESET_WORDS, STOP_WORDS, build, contains_wake_word, greeting
-from .voice import Mouth, is_yes
+from .main import FOLLOW_UP_WINDOW, RESET_WORDS, build, greeting
+from .listening import route
+from .voice import Mouth, is_yes, output_is_speakers
 
 log = logging.getLogger("karishma.window")
 
-HUSH = __import__("re").compile(r"^\W*(ruko|ruk ja|ruk jao|bas|chup|stop|band karo|wait|ek minute)\W*$", 2)
 
 W = 380                # window width
 ORB_R = 30             # orb base radius
@@ -441,17 +441,26 @@ class OrbApp:
     def _listen_loop(self):
         ears, mouth, cfg = self.ears, self.mouth, self.cfg
 
+        flag = {"over_voice": False}
+
         def barge_in():
-            # The user started talking: if Karishma is talking, stop her immediately.
+            # Someone started talking while Karishma talks. With headphones it's surely the user ->
+            # stop at once. On the laptop speakers it may be her own echo -> decide after
+            # transcribing (needs "Karishma…" or "ruko/bas").
+            flag["over_voice"] = mouth.speaking
             if mouth.speaking:
-                mouth.stop()
+                if not output_is_speakers():
+                    mouth.stop()
+                return
             self.set_state("hearing")
 
         while not self.stop_all:
             if self.paused:
                 time.sleep(0.3)
                 continue
-            heard = ears.listen(max_wait=3, echo_guard=lambda: mouth.speaking, on_start=barge_in)
+            flag["over_voice"] = False
+            heard = ears.listen(max_wait=3, echo_guard=lambda: mouth.speaking or time.time() - mouth.last_end < 0.6,
+                                on_start=barge_in)
             if ears.last_error:
                 self.set_state("error", "Sun nahi pa rahi")
                 self.show_answer(ears.last_error)
@@ -464,59 +473,43 @@ class OrbApp:
                                    ("awake" if time.time() < self.awake_until else "listening"))
                 continue
             log.info("heard: %s", heard)
-            if self.state == "hearing" and self.answer_text and _is_echo(heard, self.answer_text):
-                log.info("ignored own voice (echo)")
-                self.set_state("awake")
+            near_voice = flag["over_voice"] or mouth.speaking or time.time() - mouth.last_end < 1.5
+            action, text = route(
+                heard, cfg,
+                over_voice=flag["over_voice"], near_voice=near_voice, speakers=output_is_speakers(),
+                said=self.answer_text, waiting_answer=self.waiting_answer.is_set(),
+                awake=cfg.listen_mode == "always" or time.time() < self.awake_until,
+                busy=self.busy.is_set(),
+            )
+            log.info("route: %s %r", action, text)
+            if action == "ignore":
+                if self.state == "hearing":
+                    self.set_state("thinking" if self.busy.is_set() else
+                                   ("awake" if time.time() < self.awake_until else "listening"))
                 continue
-
-            if self.waiting_answer.is_set():  # a tool asked a question (confirm/ask)
+            if mouth.speaking:
+                mouth.stop()
+            if action == "answer":
                 self.show_query(heard)
-                self.answers.put(heard)
-                continue
-
-            active = (cfg.listen_mode == "always" or time.time() < self.awake_until
-                      or self.busy.is_set() or mouth.speaking)
-            request = heard
-            if not active:
-                after = contains_wake_word(heard, cfg)
-                if after is None:
-                    self.set_state("listening")
-                    continue
-                if not after:  # only "Karishma"
-                    self.show_query(heard)
-                    self.awake_until = time.time() + FOLLOW_UP_WINDOW
-                    self.set_state("awake", "Ji, boliye…")
-                    continue
-                request = after
-            else:
-                stripped = contains_wake_word(heard, cfg)
-                if stripped:
-                    request = stripped
-
-            if HUSH.match(request):  # "ruko", "bas", "stop" -> just stop
+                self.answers.put(text)
+            elif action == "wake":
+                self.show_query(heard)
+                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.set_state("awake", "Ji, boliye…")
+            elif action == "hush":
                 if self.brain:
                     self.brain.cancel.set()
-                mouth.stop()
                 self.show_query(heard)
                 self.show_answer("Theek hai, ruk gayi.")
+                self.awake_until = time.time() + FOLLOW_UP_WINDOW
                 self.set_state("awake")
-                continue
-            if STOP_WORDS.search(request):
+            elif action == "bye":
                 self.awake_until = 0
                 self.show_query(heard)
                 self.show_answer("Theek hai. Jab zarurat ho 'Karishma' boliye.")
                 self.set_state("listening")
-                continue
-            self.submit(request)
-
-
-def _is_echo(heard: str, said: str) -> bool:
-    """True if what the mic heard is mostly Karishma's own sentence (speaker echo)."""
-    h = {w for w in heard.lower().split() if len(w) > 2}
-    if len(h) < 2:
-        return False
-    s = {w for w in said.lower().split() if len(w) > 2}
-    return len(h & s) / len(h) >= 0.6
+            else:  # command
+                self.submit(text)
 
 
 def _friendly(status: str) -> str:
