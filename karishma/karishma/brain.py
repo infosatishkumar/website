@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime
 from typing import Any, Callable
 
@@ -76,6 +77,7 @@ class Brain:
         self.use_fallbacks = True
         self.use_compaction = True
         self.max_steps = 40
+        self.cancel = threading.Event()  # set by the UI when the user gives a new command
 
     # ------------------------------------------------------------------
     def reset(self) -> None:
@@ -124,14 +126,24 @@ class Brain:
                 return self._create()
             raise
 
+    def _close_open_turn(self) -> None:
+        """History must end cleanly; the next user message simply follows (append-only)."""
+        if self.messages and self.messages[-1]["role"] == "user" and isinstance(self.messages[-1]["content"], list):
+            # last message is tool results - fine; add a short note so the model knows it was interrupted
+            self.messages.append({"role": "user", "content": "(Pichhla kaam user ne beech me rok diya.)"})
+
     # ------------------------------------------------------------------
-    def handle(self, user_text: str) -> str:
-        """Process one user request end-to-end and return the text to speak."""
+    def handle(self, user_text: str) -> str | None:
+        """Process one user request end-to-end and return the text to speak.
+        Returns None if cancelled (the user gave a newer command)."""
         stamp = datetime.now().strftime("%A, %d %B %Y, %I:%M %p")
         self.messages.append({"role": "user", "content": f"[{stamp}] {user_text}"})
 
         spoken: list[str] = []
         for step in range(self.max_steps):
+            if self.cancel.is_set():
+                self._close_open_turn()
+                return None
             try:
                 response = self._create()
             except anthropic.RateLimitError:
@@ -161,6 +173,10 @@ class Brain:
                     self.on_status(" ".join(texts))
                 results = []
                 for tu in tool_uses:
+                    if self.cancel.is_set():
+                        results.append({"type": "tool_result", "tool_use_id": tu.id,
+                                        "content": "Cancelled: the user gave a new command.", "is_error": True})
+                        continue
                     self.on_status(f"[tool] {tu.name}")
                     content, is_error = self.tools.execute(tu.name, tu.input)
                     log.info("tool %s(%s) error=%s", tu.name, str(tu.input)[:300], is_error)

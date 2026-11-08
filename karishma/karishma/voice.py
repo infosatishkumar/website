@@ -62,6 +62,9 @@ class Mouth:
     def __init__(self, cfg: Config):
         self.cfg = cfg
         self._client = None
+        self._proc: subprocess.Popen | None = None
+        self.speaking = False
+        self.interrupted = False
         if cfg.elevenlabs_api_key:
             from elevenlabs.client import ElevenLabs
 
@@ -87,11 +90,26 @@ class Mouth:
             return best.voice_id
         return None
 
+    def stop(self) -> None:
+        """Stop talking right now (user interrupted)."""
+        self.interrupted = True
+        proc = self._proc
+        if proc and proc.poll() is None:
+            proc.terminate()
+
     def speak(self, text: str) -> None:
         text = clean_for_speech(text)
         if not text:
             return
         print(f"\n🟣 Karishma: {text}\n", flush=True)
+        self.interrupted = False
+        self.speaking = True
+        try:
+            self._speak(text)
+        finally:
+            self.speaking = False
+
+    def _speak(self, text: str) -> None:
         if self._client and self.cfg.elevenlabs_voice_id:
             try:
                 audio = b"".join(
@@ -108,21 +126,29 @@ class Mouth:
                 log.warning("ElevenLabs TTS failed, falling back: %s", e)
         if self.cfg.is_mac and shutil.which("say"):
             voice = "Lekha" if re.search(r"[ऀ-ॿ]", text) else "Veena"
-            r = subprocess.run(["say", "-v", voice, text], capture_output=True)
-            if r.returncode != 0:
-                subprocess.run(["say", text])
+            self._run(["say", "-v", voice, text])
 
     def _play_mp3(self, audio: bytes) -> None:
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
             f.write(audio)
             path = f.name
         try:
+            if self.interrupted:
+                return
             if shutil.which("afplay"):
-                subprocess.run(["afplay", path])
+                self._run(["afplay", path])
             elif shutil.which("ffplay"):
-                subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path])
+                self._run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path])
         finally:
             Path(path).unlink(missing_ok=True)
+
+
+    def _run(self, args: list[str]) -> None:
+        self._proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            self._proc.wait()
+        finally:
+            self._proc = None
 
 
 class Ears:
@@ -141,6 +167,7 @@ class Ears:
         self.threshold = 500.0
         self.mic_blocked = False
         self.last_error = ""
+        self.level = 0.0  # 0..1, for the animated orb
         self.calibrate()
 
     def calibrate(self, seconds: float = 1.0) -> None:
@@ -157,8 +184,13 @@ class Ears:
         self.threshold = max(300.0, noise * 3.0)
         log.info("noise=%.0f threshold=%.0f", noise, self.threshold)
 
-    def record(self, max_wait: float = 30.0, max_len: float = 30.0, silence: float = 1.1) -> bytes | None:
-        """Record one utterance (energy-based voice detection). Returns WAV bytes or None."""
+    def record(self, max_wait: float = 30.0, max_len: float = 30.0, silence: float = 0.8,
+               echo_guard=None, on_start=None) -> bytes | None:
+        """Record one utterance (energy-based voice detection). Returns WAV bytes or None.
+
+        echo_guard(): True while Karishma herself is talking -> need louder, longer speech to start
+        (so her own voice from the speakers isn't taken as the user). on_start() fires the moment
+        the user starts speaking (used to stop Karishma mid-sentence)."""
         import numpy as np
         import sounddevice as sd
 
@@ -166,26 +198,35 @@ class Ears:
         frames: list[bytes] = []
         pre_roll: list[bytes] = []
         started = False
+        loud_blocks = 0
         quiet_time = 0.0
         t0 = time.time()
         with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16", blocksize=block) as stream:
             while True:
                 data, _ = stream.read(block)
                 rms = float(np.sqrt(np.mean(data.astype(np.float32) ** 2)))
+                self.level = min(1.0, rms / (self.threshold * 6))
                 chunk = data.tobytes()
                 if not started:
-                    pre_roll = (pre_roll + [chunk])[-6:]
-                    if rms > self.threshold:
+                    pre_roll = (pre_roll + [chunk])[-8:]
+                    guarded = bool(echo_guard and echo_guard())
+                    need = self.threshold * (4.0 if guarded else 1.0)
+                    loud_blocks = loud_blocks + 1 if rms > need else 0
+                    if loud_blocks >= (6 if guarded else 2):
                         started = True
                         frames.extend(pre_roll)
                         t_start = time.time()
+                        if on_start:
+                            on_start()
                     elif time.time() - t0 > max_wait:
+                        self.level = 0.0
                         return None
                     continue
                 frames.append(chunk)
                 quiet_time = quiet_time + 0.05 if rms < self.threshold else 0.0
                 if quiet_time >= silence or time.time() - t_start > max_len:
                     break
+        self.level = 0.0
         pcm = b"".join(frames)
         if len(pcm) < SAMPLE_RATE * 2 * 0.4:  # < 0.4 s -> noise
             return None
@@ -200,8 +241,8 @@ class Ears:
         text = re.sub(r"[\(\[][^\)\]]*[\)\]]", "", text).strip()
         return text
 
-    def listen(self, max_wait: float = 30.0) -> str:
-        wav = self.record(max_wait=max_wait)
+    def listen(self, max_wait: float = 30.0, echo_guard=None, on_start=None) -> str:
+        wav = self.record(max_wait=max_wait, echo_guard=echo_guard, on_start=on_start)
         if not wav:
             return ""
         try:

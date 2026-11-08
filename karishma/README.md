@@ -63,10 +63,20 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 ./make_app.sh
 ```
 
-Phir **Launchpad / Applications → Karishma** kholiye. Karishma ki window khulegi (Dock me bhi icon):
-gol "K" ka rang batata hai — bangni = sun rahi hai ('Karishma' boliye), hara = boliye, peela = soch rahi hai,
-gulabi = bol rahi hai, grey = paused, laal = problem. Window me poori baatchit dikhti hai, neeche type karke bhi
-poochh sakte hain, aur Pause / Naya topic / Settings / Band karo buttons hain.
+Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Siri jaisa animated gola aayega:
+- dheere saans leta gola = 'Karishma' bolne ka intezaar
+- bada, aawaz ke saath hilta = sun rahi hai
+- tezi se ghoomta = soch / kaam kar rahi hai
+- dhadakta = bol rahi hai
+- grey = paused, laal = problem
+
+Aapka sawaal aur Karishma ka jawab gole ke neeche card me dikhte hain (25 sec baad chhup jaate hain).
+**Gole par click** = Karishma ko jagao / bolte hue rok do. **Right-click** = menu (type karke poochho, pause,
+naya topic, settings, band karo). Gole ko drag karke kahin bhi rakh sakte hain.
+
+**Beech me bolna:** Karishma bol rahi ho ya kaam kar rahi ho aur aap bolne lagein, to wo turant chup hokar
+aapki nayi baat sunti hai aur naya kaam karti hai. "ruko" / "bas" bolne se sirf ruk jaati hai.
+(Headphones se ye sabse achha chalta hai; speaker par bahut zor ki awaaz me apni hi awaaz se ruk sakti hai.)
 
 Mac on hote hi apne aap chalu ho, iske liye:
 

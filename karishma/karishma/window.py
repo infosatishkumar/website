@@ -1,77 +1,75 @@
-"""Karishma as a normal Mac app window (Dock icon + status + chat).
+"""Karishma - Siri-style floating orb for macOS.
 
-Launched by Karishma.app (./make_app.sh). The voice loop runs on a background
-thread and sends UI updates through a queue; Tk stays on the main thread.
+A small animated orb floats at the top-right of the screen. What you said and
+Karishma's answer appear in cards below it.
+
+Threads
+- UI (main):  Tk drawing + animation
+- listener:   the ONLY thread that reads the microphone. Keeps listening even while
+              Karishma talks or works -> if you speak she stops talking at once
+              (barge-in) and your new command replaces the old one.
+- brain:      runs Claude + tools one job at a time (Playwright needs one thread).
 """
 
 from __future__ import annotations
 
 import logging
+import math
 import os
 import queue
+import random
 import subprocess
 import threading
 import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import font as tkfont
+from tkinter import simpledialog
 
 from .config import load_config
-from .main import (
-    FOLLOW_UP_WINDOW, RESET_WORDS, STOP_WORDS, VoiceIO, build, contains_wake_word, greeting,
-)
-from .voice import Mouth
+from .main import FOLLOW_UP_WINDOW, RESET_WORDS, STOP_WORDS, build, contains_wake_word, greeting
+from .voice import Mouth, is_yes
 
 log = logging.getLogger("karishma.window")
 
-BG = "#1b1530"
-PANEL = "#251d40"
-TEXT = "#f3efff"
-MUTED = "#a99fc9"
-STATES = {
-    # state: (orb colour, label)
-    "starting": ("#7c3aed", "Shuru ho rahi hoon…"),
-    "listening": ("#8b5cf6", "Sun rahi hoon — 'Karishma' boliye"),
-    "awake": ("#22c55e", "Boliye, main sun rahi hoon…"),
-    "thinking": ("#f59e0b", "Soch rahi hoon…"),
-    "speaking": ("#ec4899", "Bol rahi hoon…"),
-    "paused": ("#6b7280", "Paused — sun nahi rahi"),
-    "error": ("#ef4444", "Problem hai"),
-}
+HUSH = __import__("re").compile(r"^\W*(ruko|ruk ja|ruk jao|bas|chup|stop|band karo|wait|ek minute)\W*$", 2)
+
+W = 380                # window width
+ORB_R = 30             # orb base radius
+ORB_CX, ORB_CY = W - 52, 52
+CARD = "#1f2233"
+CARD2 = "#2a2e45"
+TXT = "#f4f4fb"
+SUB = "#a5a8c3"
+SIRI = ["#7c3aed", "#ec4899", "#22d3ee", "#3b82f6", "#a855f7"]
 
 
-class UiMouth(Mouth):
-    def __init__(self, cfg, post):
-        super().__init__(cfg)
-        self.post = post
+# ---------------------------------------------------------------- IO for the brain
+class OrbIO:
+    """say/ask/confirm used by tools. Answers come from the listener thread."""
 
-    def speak(self, text: str) -> None:
-        self.post("chat", "Karishma", text)
-        self.post("state", "speaking", "")
+    def __init__(self, app: "OrbApp"):
+        self.app = app
+
+    def say(self, text: str) -> None:
+        self.app.show_answer(text)
+        self.app.set_state("speaking")
         try:
-            super().speak(text)
+            self.app.mouth.speak(text)
         finally:
-            self.post("state", "_restore", "")
-
-
-class UiVoiceIO(VoiceIO):
-    def __init__(self, mouth, ears, post):
-        super().__init__(mouth, ears)
-        self.post = post
+            self.app.set_state("awake")
 
     def ask(self, question: str) -> str:
         self.say(question)
-        self.post("state", "awake", "")
-        for _ in range(2):
-            ans = self.ears.listen(max_wait=20)
-            if ans:
-                self.post("chat", "Aap", ans)
-                return ans
-            self.say("Maine suna nahi, phir se boliye?")
-        return ""
+        return self.app.wait_for_answer(timeout=30)
+
+    def confirm(self, summary: str) -> bool:
+        ans = self.ask(summary + " Haan ya nahi?")
+        return is_yes(ans)
 
 
-class KarishmaWindow:
+# ---------------------------------------------------------------- the app
+class OrbApp:
     def __init__(self):
         self.cfg = load_config()
         logging.basicConfig(
@@ -79,18 +77,46 @@ class KarishmaWindow:
             format="%(asctime)s %(name)s %(levelname)s %(message)s",
             handlers=[logging.FileHandler(self.cfg.log_file, encoding="utf-8")],
         )
-        self.events: queue.Queue = queue.Queue()
-        self.typed: queue.Queue[str] = queue.Queue()
+        self.state = "starting"
         self.paused = False
-        self.stop = False
+        self.stop_all = False
+        self.awake_until = 0.0
+        self.jobs: queue.Queue[str] = queue.Queue()
+        self.answers: queue.Queue[str] = queue.Queue()
+        self.waiting_answer = threading.Event()
+        self.busy = threading.Event()        # brain is working on a job
+        self.ui: queue.Queue = queue.Queue()  # (kind, payload) for the Tk thread
         self.brain = None
-        self.base_state = "starting"
+        self.mouth = None
+        self.ears = None
+        self.io = OrbIO(self)
 
+        # view state
+        self.query_text = ""
+        self.answer_text = ""
+        self.status_text = "Shuru ho rahi hoon…"
+        self.cards_visible = True
+        self.last_activity = time.time()
+        self.t0 = time.time()
+        self.smooth_level = 0.0
+
+        self._build_window()
+        threading.Thread(target=self._startup, daemon=True).start()
+
+    # ======================= UI (main thread) =======================
+    def _build_window(self):
         self.root = tk.Tk()
         self.root.title("Karishma")
-        self.root.geometry("440x620")
-        self.root.minsize(360, 480)
-        self.root.configure(bg=BG)
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+        bg = "#000001"
+        try:  # real transparency on macOS
+            self.root.attributes("-transparent", True)
+            self.root.configure(bg="systemTransparent")
+            bg = "systemTransparent"
+        except tk.TclError:
+            self.root.configure(bg="#14151f")
+            bg = "#14151f"
         icon = os.environ.get("KARISHMA_ICON")
         if icon and Path(icon).exists():
             try:
@@ -98,223 +124,417 @@ class KarishmaWindow:
                 self.root.iconphoto(True, self._icon)
             except tk.TclError:
                 pass
-        self._build_ui()
-        self.root.protocol("WM_DELETE_WINDOW", self.quit)
-        self.root.after(150, self._pump)
-        threading.Thread(target=self._worker, daemon=True).start()
+        self.canvas = tk.Canvas(self.root, width=W, height=120, bg=bg, highlightthickness=0, bd=0)
+        self.canvas.pack(fill="both", expand=True)
+        self.f_query = tkfont.Font(family="Helvetica", size=14, weight="bold")
+        self.f_answer = tkfont.Font(family="Helvetica", size=14)
+        self.f_small = tkfont.Font(family="Helvetica", size=11)
 
-    # ---------------- UI ----------------
-    def _build_ui(self):
-        big = tkfont.Font(family="Helvetica", size=22, weight="bold")
-        mid = tkfont.Font(family="Helvetica", size=13)
-        self.chat_font = tkfont.Font(family="Helvetica", size=13)
+        sw = self.root.winfo_screenwidth()
+        self.win_x, self.win_y = sw - W - 10, 34
+        self.root.geometry(f"{W}x120+{self.win_x}+{self.win_y}")
 
-        top = tk.Frame(self.root, bg=BG)
-        top.pack(fill="x", pady=(18, 6))
-        self.orb = tk.Canvas(top, width=110, height=110, bg=BG, highlightthickness=0)
-        self.orb.pack()
-        self.orb_id = self.orb.create_oval(10, 10, 100, 100, fill=STATES["starting"][0], outline="")
-        self.orb.create_text(55, 55, text="K", fill="white", font=big)
-        tk.Label(top, text="Karishma", bg=BG, fg=TEXT, font=big).pack(pady=(6, 0))
-        self.status = tk.Label(top, text=STATES["starting"][1], bg=BG, fg=MUTED, font=mid, wraplength=400)
-        self.status.pack(pady=(2, 0))
+        self.canvas.bind("<ButtonPress-1>", self._press)
+        self.canvas.bind("<B1-Motion>", self._drag)
+        self.canvas.bind("<ButtonRelease-1>", self._release)
+        self.canvas.bind("<Button-2>", self._menu)          # right click (mac)
+        self.canvas.bind("<Button-3>", self._menu)
+        self.canvas.bind("<Control-Button-1>", self._menu)
 
-        btns = tk.Frame(self.root, bg=BG)
-        btns.pack(side="bottom", fill="x", padx=14, pady=(8, 14))
-        self.pause_btn = tk.Button(btns, text="⏸ Pause", command=self.toggle_pause)
-        self.pause_btn.pack(side="left")
-        tk.Button(btns, text="Naya topic", command=self.new_topic).pack(side="left", padx=6)
-        tk.Button(btns, text="Settings", command=self.open_settings).pack(side="left")
-        tk.Button(btns, text="Band karo", command=self.quit).pack(side="right")
+        self.menu = tk.Menu(self.root, tearoff=0)
+        self.menu.add_command(label="⌨️  Type karke poochho…", command=self.ask_typed)
+        self.menu.add_command(label="⏸  Pause / Resume", command=self.toggle_pause)
+        self.menu.add_command(label="🆕  Naya topic", command=self.new_topic)
+        self.menu.add_command(label="🗂  Jawab dikhao / chhupao", command=self.toggle_cards)
+        self.menu.add_separator()
+        self.menu.add_command(label="⚙️  Settings (.env)", command=self.open_settings)
+        self.menu.add_command(label="📄  Log", command=lambda: subprocess.run(["open", "-a", "Console", str(self.cfg.log_file)]))
+        self.menu.add_separator()
+        self.menu.add_command(label="❌  Karishma band karo", command=self.quit)
 
-        entry_row = tk.Frame(self.root, bg=BG)
-        entry_row.pack(side="bottom", fill="x", padx=14)
-        self.entry = tk.Entry(entry_row, font=mid, relief="flat", bg="#ffffff", fg="#111111")
-        self.entry.pack(side="left", fill="x", expand=True, ipady=6)
-        self.entry.bind("<Return>", lambda e: self.send_typed())
-        tk.Button(entry_row, text="Bhejo", command=self.send_typed).pack(side="left", padx=(6, 0))
+        self.root.after(33, self._tick)
 
-        box = tk.Frame(self.root, bg=PANEL)
-        box.pack(fill="both", expand=True, padx=14, pady=10)
-        self.chat = tk.Text(box, bg=PANEL, fg=TEXT, wrap="word", relief="flat", font=self.chat_font,
-                            padx=10, pady=10, state="disabled", highlightthickness=0, cursor="arrow")
-        scroll = tk.Scrollbar(box, command=self.chat.yview)
-        self.chat.configure(yscrollcommand=scroll.set)
-        scroll.pack(side="right", fill="y")
-        self.chat.pack(side="left", fill="both", expand=True)
-        self.chat.tag_configure("Karishma", foreground="#d8b4fe")
-        self.chat.tag_configure("Aap", foreground="#93c5fd")
-        self.chat.tag_configure("info", foreground=MUTED)
+    # --- mouse ---
+    def _press(self, e):
+        self._drag_from = (e.x_root, e.y_root, self.win_x, self.win_y)
+        self._moved = False
 
+    def _drag(self, e):
+        sx, sy, wx, wy = self._drag_from
+        dx, dy = e.x_root - sx, e.y_root - sy
+        if abs(dx) + abs(dy) > 4:
+            self._moved = True
+            self.win_x, self.win_y = wx + dx, wy + dy
+            self.root.geometry(f"+{self.win_x}+{self.win_y}")
 
-    def add_chat(self, who: str, text: str):
-        self.chat.configure(state="normal")
-        if who == "info":
-            self.chat.insert("end", f"{text}\n\n", "info")
+    def _release(self, e):
+        if self._moved:
+            return
+        on_orb = (e.x - ORB_CX) ** 2 + (e.y - ORB_CY) ** 2 <= (ORB_R + 14) ** 2
+        if on_orb:
+            # Click the orb = "Hey Karishma": stop talking and listen now.
+            if self.mouth and self.mouth.speaking:
+                self.mouth.stop()
+            self.awake_until = time.time() + FOLLOW_UP_WINDOW
+            self.cards_visible = True
+            self.set_state("awake")
         else:
-            self.chat.insert("end", f"{who}: ", who)
-            self.chat.insert("end", f"{text}\n\n")
-        self.chat.configure(state="disabled")
-        self.chat.see("end")
+            self.toggle_cards()
 
-    def set_state(self, state: str, detail: str = ""):
-        if state == "_restore":
-            state = "paused" if self.paused else self.base_state
-        colour, label = STATES.get(state, STATES["listening"])
-        if state == "error" and detail:
-            label = f"Problem: {detail}"
-        elif detail:
-            label = f"{label}  ({detail[:50]})"
-        self.orb.itemconfigure(self.orb_id, fill=colour)
-        self.status.configure(text=label)
-
-    def _pump(self):
+    def _menu(self, e):
         try:
-            while True:
-                kind, a, b = self.events.get_nowait()
-                if kind == "chat":
-                    self.add_chat(a, b)
-                elif kind == "state":
-                    self.set_state(a, b)
-        except queue.Empty:
-            pass
-        if not self.stop:
-            self.root.after(150, self._pump)
+            self.menu.tk_popup(e.x_root, e.y_root)
+        finally:
+            self.menu.grab_release()
 
-    def post(self, kind, a, b=""):
-        if kind == "state" and a in ("listening", "awake", "starting"):
-            self.base_state = a
-        self.events.put((kind, a, b))
-
-    def send_typed(self):
-        text = self.entry.get().strip()
-        if text:
-            self.entry.delete(0, "end")
-            self.typed.put(text)
+    # --- menu actions ---
+    def ask_typed(self):
+        text = simpledialog.askstring("Karishma", "Kya karna hai?", parent=self.root)
+        if text and text.strip():
+            self.submit(text.strip(), typed=True)
 
     def toggle_pause(self):
         self.paused = not self.paused
-        self.pause_btn.configure(text="▶ Resume" if self.paused else "⏸ Pause")
-        self.set_state("_restore")
+        if self.paused and self.mouth:
+            self.mouth.stop()
+        self.set_state("paused" if self.paused else "listening")
 
     def new_topic(self):
         if self.brain:
             self.brain.reset()
-        self.add_chat("info", "— Naya topic shuru —")
+        self.query_text, self.answer_text = "", "Naya topic shuru."
+
+    def toggle_cards(self):
+        self.cards_visible = not self.cards_visible
+        self.last_activity = time.time()
 
     def open_settings(self):
         env = Path(__file__).resolve().parent.parent / ".env"
         subprocess.run(["open", "-e", str(env)])
-        self.add_chat("info", "Settings badalne ke baad Karishma ko band karke dobara kholiye.")
+        self.answer_text = "Settings badalne ke baad Karishma ko band karke dobara kholiye."
+        self.cards_visible = True
 
     def quit(self):
-        self.stop = True
+        self.stop_all = True
+        if self.mouth:
+            self.mouth.stop()
         try:
             self.root.destroy()
         finally:
             os._exit(0)
 
+    # --- thread-safe setters ---
+    def set_state(self, state: str, status: str | None = None):
+        self.state = state
+        labels = {
+            "starting": "Shuru ho rahi hoon…",
+            "listening": "'Karishma' boliye",
+            "awake": "Sun rahi hoon…",
+            "hearing": "Sun rahi hoon…",
+            "thinking": "Soch rahi hoon…",
+            "speaking": "",
+            "paused": "Paused — click karke resume",
+            "error": "Problem",
+        }
+        self.status_text = status if status is not None else labels.get(state, "")
+        if state in ("hearing", "thinking", "speaking", "error"):
+            self.cards_visible = True
+            self.last_activity = time.time()
+
+    def show_query(self, text: str):
+        self.query_text = text
+        self.answer_text = ""
+        self.cards_visible = True
+        self.last_activity = time.time()
+
+    def show_answer(self, text: str):
+        self.answer_text = text
+        self.cards_visible = True
+        self.last_activity = time.time()
+
+    # --- drawing ---
+    def _tick(self):
+        try:
+            self._draw()
+        except Exception:  # noqa: BLE001
+            log.exception("draw failed")
+        if not self.stop_all:
+            self.root.after(33, self._tick)
+
+    def _draw(self):
+        c = self.canvas
+        c.delete("all")
+        t = time.time() - self.t0
+        level = self.ears.level if self.ears else 0.0
+        self.smooth_level += (level - self.smooth_level) * 0.35
+        lv = self.smooth_level
+        st = self.state
+
+        # auto-hide cards after 25 s of quiet
+        if st in ("listening", "awake") and time.time() - self.last_activity > 25:
+            self.cards_visible = False
+
+        # ---- orb ----
+        if st == "paused":
+            r = ORB_R * 0.8
+            c.create_oval(ORB_CX - r, ORB_CY - r, ORB_CX + r, ORB_CY + r, fill="#4b5563", outline="#9ca3af", width=2)
+            c.create_text(ORB_CX, ORB_CY, text="⏸", fill="white", font=self.f_query)
+        elif st == "error":
+            r = ORB_R * (0.9 + 0.05 * math.sin(t * 3))
+            c.create_oval(ORB_CX - r, ORB_CY - r, ORB_CX + r, ORB_CY + r, fill="#dc2626", outline="#fca5a5", width=2)
+            c.create_text(ORB_CX, ORB_CY, text="!", fill="white", font=self.f_query)
+        else:
+            if st == "listening":
+                speed, amp, size = 0.8, 0.05, 0.78 + lv * 0.25
+            elif st in ("awake", "hearing"):
+                speed, amp, size = 1.6, 0.08, 0.95 + lv * 0.55
+            elif st == "thinking":
+                speed, amp, size = 4.5, 0.10, 0.95
+            elif st == "speaking":
+                speed, amp = 2.4, 0.12
+                size = 1.0 + 0.12 * abs(math.sin(t * 7.0)) + 0.06 * random.random()
+            else:
+                speed, amp, size = 1.0, 0.05, 0.85
+            base = ORB_R * size
+            # outer glow rings
+            for i in range(3):
+                gr = base + 6 + i * 5 + (lv * 10 if st in ("awake", "hearing") else 0) + 3 * math.sin(t * speed + i)
+                col = SIRI[(i + int(t * speed)) % len(SIRI)]
+                c.create_oval(ORB_CX - gr, ORB_CY - gr, ORB_CX + gr, ORB_CY + gr, outline=col, width=1.5)
+            # dark core
+            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, fill="#0b0b1a", outline="")
+            # swirling colour blobs
+            for i, col in enumerate(SIRI[:4]):
+                ang = t * speed + i * (math.pi / 2)
+                off = base * (0.32 + amp * math.sin(t * 2.1 + i))
+                br = base * (0.62 + amp * math.cos(t * 1.7 + i * 1.3) + lv * 0.2)
+                bx, by = ORB_CX + off * math.cos(ang), ORB_CY + off * math.sin(ang)
+                c.create_oval(bx - br, by - br, bx + br, by + br, fill=col, outline="")
+            # glossy highlight + rim
+            c.create_oval(ORB_CX - base * 0.45, ORB_CY - base * 0.75, ORB_CX + base * 0.1, ORB_CY - base * 0.35,
+                          fill="#ffffff", outline="")
+            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#c4b5fd", width=2)
+
+        y = ORB_CY + ORB_R + 26
+        if self.cards_visible:
+            if self.status_text:
+                c.create_text(W - 14, y, text=self.status_text, fill=SUB, font=self.f_small, anchor="e")
+                y += 18
+            if self.query_text:
+                y = self._card(y, self.query_text, self.f_query, CARD2)
+            if self.answer_text:
+                y = self._card(y, self.answer_text, self.f_answer, CARD)
+        h = int(max(y + 8, ORB_CY + ORB_R + 30))
+        if h != getattr(self, "_h", None):
+            self._h = h
+            self.canvas.configure(height=h)
+            self.root.geometry(f"{W}x{h}+{self.win_x}+{self.win_y}")
+
+    def _card(self, y: float, text: str, font, fill) -> float:
+        c = self.canvas
+        pad, x0, x1 = 12, 10, W - 10
+        if len(text) > 700:
+            text = text[:700] + "…"
+        tid = c.create_text(x0 + pad, y + pad, text=text, fill=TXT, font=font, anchor="nw", width=x1 - x0 - 2 * pad)
+        bx0, by0, bx1, by1 = c.bbox(tid)
+        bottom = by1 + pad
+        self._round_rect(x0, y, x1, bottom, 14, fill)
+        c.tag_raise(tid)
+        return bottom + 8
+
+    def _round_rect(self, x0, y0, x1, y1, r, fill):
+        pts = [x0 + r, y0, x1 - r, y0, x1, y0, x1, y0 + r, x1, y1 - r, x1, y1, x1 - r, y1,
+               x0 + r, y1, x0, y1, x0, y1 - r, x0, y0 + r, x0, y0]
+        self.canvas.create_polygon(pts, smooth=True, fill=fill, outline="")
+
     def run(self):
-        self.root.lift()
-        self.root.attributes("-topmost", True)
-        self.root.after(800, lambda: self.root.attributes("-topmost", False))
         self.root.mainloop()
 
-    # ---------------- voice loop (background thread) ----------------
-    def _worker(self):
+    # ======================= logic (background threads) =======================
+    def submit(self, text: str, typed: bool = False):
+        """A new command: cancel whatever Karishma is doing and do this instead."""
+        self.show_query(text)
+        if self.mouth and self.mouth.speaking:
+            self.mouth.stop()
+        if self.busy.is_set() and self.brain:
+            self.brain.cancel.set()
+        # drop older pending jobs - only the newest command matters
+        while not self.jobs.empty():
+            try:
+                self.jobs.get_nowait()
+            except queue.Empty:
+                break
+        self.jobs.put(text)
+        self.awake_until = time.time() + FOLLOW_UP_WINDOW
+
+    def wait_for_answer(self, timeout: float) -> str:
+        while not self.answers.empty():
+            self.answers.get_nowait()
+        self.waiting_answer.set()
+        self.set_state("awake", "Boliye…")
         try:
-            self._run()
-        except Exception as e:  # noqa: BLE001
-            log.exception("Karishma crashed")
-            self.post("state", "error", str(e)[:120])
-            self.post("chat", "info", f"Error: {e}\n(Log: ~/.karishma/karishma.log)")
-
-    def _handle(self, io, text: str):
-        if RESET_WORDS.search(text):
-            self.brain.reset()
-            io.say("Theek hai, naya topic.")
-            return
-        self.post("state", "thinking")
-        self.brain.on_status = lambda s: self.post("state", "thinking", s.replace("[tool] ", ""))
-        io.say(self.brain.handle(text))
-
-    def _run(self):
-        cfg = self.cfg
-        if not cfg.anthropic_api_key or not cfg.elevenlabs_api_key:
-            self.post("state", "error", "API keys missing")
-            self.post("chat", "info", "ANTHROPIC_API_KEY / ELEVENLABS_API_KEY nahi mili. 'Settings' dabakar daaliye.")
-            return
-        from .voice import Ears
-
-        mouth = UiMouth(cfg, self.post)
-        self.post("chat", "info", "Microphone check ho raha hai… 1 second shaant rahiye.")
-        ears = Ears(cfg)
-        io = UiVoiceIO(mouth, ears, self.post)
-        if ears.mic_blocked:
-            self.post("state", "error", "Microphone permission chahiye")
-            mouth.speak("Mujhe microphone ki permission nahi mili, isliye main sun nahi pa rahi. "
-                        "Settings me Karishma ya Python ko ON kar dijiye.")
-            subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"])
-            while ears.mic_blocked and not self.stop:
-                time.sleep(5)
-                ears.calibrate()
-            mouth.speak("Shukriya! Ab main sun sakti hoon.")
-        self.brain, browser = build(cfg, io)
-        try:
-            io.say(greeting(cfg))
-            awake_until = time.time() + FOLLOW_UP_WINDOW
-            while not self.stop:
-                try:
-                    typed = self.typed.get_nowait()
-                except queue.Empty:
-                    typed = None
-                if typed:
-                    self.post("chat", "Aap", typed)
-                    self._handle(io, typed)
-                    awake_until = time.time() + FOLLOW_UP_WINDOW
-                    continue
-                if self.paused:
-                    time.sleep(0.3)
-                    continue
-                awake = cfg.listen_mode == "always" or time.time() < awake_until
-                self.post("state", "awake" if awake else "listening")
-                heard = ears.listen(max_wait=2)
-                if ears.last_error:
-                    self.post("chat", "info", ears.last_error)
-                    self.post("state", "error", "sun nahi pa rahi")
-                    ears.last_error = ""
-                    time.sleep(3)
-                if not heard or self.paused:
-                    continue
-                request = heard
-                if not awake:
-                    after = contains_wake_word(heard, cfg)
-                    if after is None:
-                        continue
-                    self.post("chat", "Aap", heard)
-                    if not after:
-                        io.say("Ji, boliye?")
-                        self.post("state", "awake")
-                        request = ears.listen(max_wait=15)
-                        if not request:
-                            continue
-                        self.post("chat", "Aap", request)
-                    else:
-                        request = after
-                else:
-                    self.post("chat", "Aap", heard)
-                if STOP_WORDS.search(request):
-                    io.say("Theek hai. Jab zarurat ho 'Karishma' boliye.")
-                    awake_until = 0
-                    continue
-                self._handle(io, request)
-                awake_until = time.time() + FOLLOW_UP_WINDOW
+            return self.answers.get(timeout=timeout)
+        except queue.Empty:
+            return ""
         finally:
-            browser.close()
+            self.waiting_answer.clear()
+
+    def _startup(self):
+        try:
+            cfg = self.cfg
+            if not cfg.anthropic_api_key or not cfg.elevenlabs_api_key:
+                self.set_state("error", "API keys missing — right-click > Settings")
+                return
+            from .voice import Ears
+
+            self.mouth = Mouth(cfg)
+            self.set_state("starting", "Mic check… 1 second shaant rahiye")
+            self.ears = Ears(cfg)
+            if self.ears.mic_blocked:
+                self.set_state("error", "Microphone permission chahiye")
+                self.show_answer("Mujhe microphone ki permission nahi mili. System Settings > Privacy & Security > "
+                                 "Microphone me Karishma ko ON kariye.")
+                self.mouth.speak("Mujhe microphone ki permission nahi mili. Settings me Karishma ko ON kar dijiye.")
+                subprocess.run(["open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"])
+                while self.ears.mic_blocked and not self.stop_all:
+                    time.sleep(5)
+                    self.ears.calibrate()
+            self.brain, self.browser = build(cfg, self.io)
+            threading.Thread(target=self._brain_loop, daemon=True).start()
+            threading.Thread(target=self._listen_loop, daemon=True).start()
+        except Exception as e:  # noqa: BLE001
+            log.exception("startup failed")
+            self.set_state("error", str(e)[:80])
+            self.show_answer(f"Error: {e}")
+
+    def _brain_loop(self):
+        self.jobs.put("__greet__")
+        while not self.stop_all:
+            text = self.jobs.get()
+            if text == "__greet__":
+                self.io.say(greeting(self.cfg))
+                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.set_state("awake")
+                continue
+            self.busy.set()
+            self.brain.cancel.clear()
+            try:
+                if RESET_WORDS.search(text):
+                    self.brain.reset()
+                    self.io.say("Theek hai, naya topic.")
+                    continue
+                self.set_state("thinking")
+                self.brain.on_status = lambda s: self.set_state("thinking", _friendly(s))
+                reply = self.brain.handle(text)
+                if reply is None or not self.jobs.empty():
+                    continue  # cancelled / a newer command is waiting
+                self.io.say(reply)
+                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+            except Exception as e:  # noqa: BLE001
+                log.exception("job failed")
+                self.show_answer(f"Error: {e}")
+            finally:
+                self.busy.clear()
+                if not self.paused and self.state not in ("speaking", "error"):
+                    self.set_state("awake" if time.time() < self.awake_until else "listening")
+
+    def _listen_loop(self):
+        ears, mouth, cfg = self.ears, self.mouth, self.cfg
+
+        def barge_in():
+            # The user started talking: if Karishma is talking, stop her immediately.
+            if mouth.speaking:
+                mouth.stop()
+            self.set_state("hearing")
+
+        while not self.stop_all:
+            if self.paused:
+                time.sleep(0.3)
+                continue
+            heard = ears.listen(max_wait=3, echo_guard=lambda: mouth.speaking, on_start=barge_in)
+            if ears.last_error:
+                self.set_state("error", "Sun nahi pa rahi")
+                self.show_answer(ears.last_error)
+                ears.last_error = ""
+                time.sleep(3)
+                continue
+            if not heard:
+                if self.state == "hearing":
+                    self.set_state("thinking" if self.busy.is_set() else
+                                   ("awake" if time.time() < self.awake_until else "listening"))
+                continue
+            log.info("heard: %s", heard)
+            if self.state == "hearing" and self.answer_text and _is_echo(heard, self.answer_text):
+                log.info("ignored own voice (echo)")
+                self.set_state("awake")
+                continue
+
+            if self.waiting_answer.is_set():  # a tool asked a question (confirm/ask)
+                self.show_query(heard)
+                self.answers.put(heard)
+                continue
+
+            active = (cfg.listen_mode == "always" or time.time() < self.awake_until
+                      or self.busy.is_set() or mouth.speaking)
+            request = heard
+            if not active:
+                after = contains_wake_word(heard, cfg)
+                if after is None:
+                    self.set_state("listening")
+                    continue
+                if not after:  # only "Karishma"
+                    self.show_query(heard)
+                    self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                    self.set_state("awake", "Ji, boliye…")
+                    continue
+                request = after
+            else:
+                stripped = contains_wake_word(heard, cfg)
+                if stripped:
+                    request = stripped
+
+            if HUSH.match(request):  # "ruko", "bas", "stop" -> just stop
+                if self.brain:
+                    self.brain.cancel.set()
+                mouth.stop()
+                self.show_query(heard)
+                self.show_answer("Theek hai, ruk gayi.")
+                self.set_state("awake")
+                continue
+            if STOP_WORDS.search(request):
+                self.awake_until = 0
+                self.show_query(heard)
+                self.show_answer("Theek hai. Jab zarurat ho 'Karishma' boliye.")
+                self.set_state("listening")
+                continue
+            self.submit(request)
+
+
+def _is_echo(heard: str, said: str) -> bool:
+    """True if what the mic heard is mostly Karishma's own sentence (speaker echo)."""
+    h = {w for w in heard.lower().split() if len(w) > 2}
+    if len(h) < 2:
+        return False
+    s = {w for w in said.lower().split() if len(w) > 2}
+    return len(h & s) / len(h) >= 0.6
+
+
+def _friendly(status: str) -> str:
+    s = status.replace("[tool] ", "")
+    return {
+        "web_search": "Internet par dhoondh rahi hoon…",
+        "web_fetch": "Page padh rahi hoon…",
+        "browser": "Browser me kaam kar rahi hoon…",
+        "run_applescript": "Mac par kar rahi hoon…",
+        "run_shell": "Mac par kar rahi hoon…",
+        "open_item": "Khol rahi hoon…",
+        "screenshot_screen": "Screen dekh rahi hoon…",
+        "remember": "Yaad kar rahi hoon…",
+    }.get(s, s[:60] if s else "Soch rahi hoon…")
 
 
 def main() -> None:
-    KarishmaWindow().run()
+    OrbApp().run()
 
 
 if __name__ == "__main__":
