@@ -18,13 +18,13 @@ import math
 import os
 import queue
 import random
+import re
 import subprocess
 import threading
 import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import font as tkfont
-from tkinter import simpledialog
 
 from .config import load_config
 from .main import FOLLOW_UP_WINDOW, RESET_WORDS, build, greeting
@@ -51,21 +51,29 @@ class OrbIO:
     def __init__(self, app: "OrbApp"):
         self.app = app
 
-    def say(self, text: str) -> None:
-        self.app.show_answer(text)
+    def say(self, text: str, show: bool = True) -> None:
+        if show:
+            self.app.show_answer(text)
         self.app.set_state("speaking")
         try:
             self.app.mouth.speak(text)
         finally:
+            self.app.last_activity = time.time()
             self.app.set_state("awake")
 
-    def ask(self, question: str) -> str:
-        self.say(question)
+    def ask(self, question: str, detail: str = "") -> str:
+        # Start accepting the answer BEFORE speaking, so "haan" said while she's
+        # still talking counts (and stops her).
+        self.app.begin_answer()
+        self.app.show_answer(question + (f"\n\n{detail}" if detail else ""))
+        self.say(question, show=False)
         return self.app.wait_for_answer(timeout=30)
 
-    def confirm(self, summary: str) -> bool:
-        ans = self.ask(summary + " Haan ya nahi?")
-        return is_yes(ans)
+    def confirm(self, summary: str, detail: str = "") -> bool:
+        return is_yes(self.ask(summary.strip() + " Haan ya nahi?", detail=detail))
+
+    def show_cards(self, items: list[dict]) -> None:
+        self.app.show_results(items)
 
 
 # ---------------------------------------------------------------- the app
@@ -96,6 +104,10 @@ class OrbApp:
         self.answer_text = ""
         self.status_text = "Shuru ho rahi hoon…"
         self.cards_visible = True
+        self.results: list[dict] = []
+        self._hit: list[tuple] = []          # clickable result rectangles
+        self.hidden = False
+        self.typing = None                   # typing Toplevel
         self.last_activity = time.time()
         self.t0 = time.time()
         self.smooth_level = 0.0
@@ -152,7 +164,51 @@ class OrbApp:
         self.menu.add_separator()
         self.menu.add_command(label="❌  Karishma band karo", command=self.quit)
 
+        try:  # clicking Karishma in the Dock brings her back with the typing box
+            self.root.createcommand("::tk::mac::ReopenApplication", self.wake_and_type)
+        except tk.TclError:
+            pass
         self.root.after(33, self._tick)
+
+    def wake_and_type(self):
+        if self.mouth and self.mouth.speaking:
+            self.mouth.stop()
+        self.awake_until = time.time() + FOLLOW_UP_WINDOW
+        self.cards_visible = True
+        self.last_activity = time.time()
+        if self.state not in ("thinking", "speaking", "error", "paused"):
+            self.set_state("awake")
+        self.open_typing()
+
+    def open_typing(self):
+        if self.typing is not None and self.typing.winfo_exists():
+            self.typing.lift()
+            self._type_entry.focus_force()
+            return
+        t = tk.Toplevel(self.root)
+        t.title("Karishma — likh kar poochhiye")
+        t.attributes("-topmost", True)
+        t.configure(bg="#1f2233")
+        t.geometry(f"{W}x58+{self.win_x}+{self.win_y + ORB_CY + ORB_R + 14}")
+        entry = tk.Entry(t, font=self.f_answer, relief="flat")
+        entry.pack(side="left", fill="x", expand=True, padx=(10, 6), pady=12, ipady=4)
+
+        def send(_e=None):
+            text = entry.get().strip()
+            if text:
+                entry.delete(0, "end")
+                self.submit(text, typed=True)
+
+        def close(_e=None):
+            t.destroy()
+            self.typing = None
+
+        tk.Button(t, text="Bhejo", command=send).pack(side="left", padx=(0, 10))
+        entry.bind("<Return>", send)
+        t.bind("<Escape>", close)
+        t.protocol("WM_DELETE_WINDOW", close)
+        self.typing, self._type_entry = t, entry
+        t.after(50, entry.focus_force)
 
     # --- mouse ---
     def _press(self, e):
@@ -172,14 +228,14 @@ class OrbApp:
             return
         on_orb = (e.x - ORB_CX) ** 2 + (e.y - ORB_CY) ** 2 <= (ORB_R + 14) ** 2
         if on_orb:
-            # Click the orb = "Hey Karishma": stop talking and listen now.
-            if self.mouth and self.mouth.speaking:
-                self.mouth.stop()
-            self.awake_until = time.time() + FOLLOW_UP_WINDOW
-            self.cards_visible = True
-            self.set_state("awake")
-        else:
-            self.toggle_cards()
+            # Click the orb = "Hey Karishma": stop talking, listen now, and offer typing.
+            self.wake_and_type()
+            return
+        for x0, y0, x1, y1, url in self._hit:
+            if x0 <= e.x <= x1 and y0 <= e.y <= y1 and url:
+                subprocess.Popen(["open", url])
+                return
+        self.toggle_cards()
 
     def _menu(self, e):
         try:
@@ -189,9 +245,7 @@ class OrbApp:
 
     # --- menu actions ---
     def ask_typed(self):
-        text = simpledialog.askstring("Karishma", "Kya karna hai?", parent=self.root)
-        if text and text.strip():
-            self.submit(text.strip(), typed=True)
+        self.wake_and_type()
 
     def toggle_pause(self):
         self.paused = not self.paused
@@ -244,6 +298,12 @@ class OrbApp:
     def show_query(self, text: str):
         self.query_text = text
         self.answer_text = ""
+        self.results = []
+        self.cards_visible = True
+        self.last_activity = time.time()
+
+    def show_results(self, items: list[dict]):
+        self.results = [i for i in items if isinstance(i, dict) and i.get("title")][:5]
         self.cards_visible = True
         self.last_activity = time.time()
 
@@ -270,9 +330,25 @@ class OrbApp:
         lv = self.smooth_level
         st = self.state
 
-        # auto-hide cards after 25 s of quiet
-        if st in ("listening", "awake") and time.time() - self.last_activity > 25:
+        quiet = time.time() - self.last_activity
+        typing_open = self.typing is not None
+        # auto-hide cards after 20 s of quiet
+        if st in ("listening", "awake") and quiet > 20 and not typing_open:
             self.cards_visible = False
+        # completely disappear while sleeping (waiting for "Karishma"), like Siri.
+        # Give time to read the answer first (longer when result cards are shown).
+        hide_after = 15 if self.results else 8
+        hide = st == "listening" and not typing_open and quiet > hide_after
+        if hide:
+            if not self.hidden:
+                self.hidden = True
+                self._h = 1
+                self.root.geometry(f"1x1+{self.win_x + W - 1}+{self.win_y}")
+            return
+        if self.hidden:
+            self.hidden = False
+            self._h = None
+            self.cards_visible = True
 
         # ---- orb ----
         if st == "paused":
@@ -316,6 +392,8 @@ class OrbApp:
             c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#c4b5fd", width=2)
 
         y = ORB_CY + ORB_R + 26
+        if typing_open:
+            y += 92  # room for the typing box (its own small window sits here)
         if self.cards_visible:
             if self.status_text:
                 c.create_text(W - 14, y, text=self.status_text, fill=SUB, font=self.f_small, anchor="e")
@@ -324,6 +402,9 @@ class OrbApp:
                 y = self._card(y, self.query_text, self.f_query, CARD2)
             if self.answer_text:
                 y = self._card(y, self.answer_text, self.f_answer, CARD)
+            self._hit = []
+            if self.results:
+                y = self._results(y)
         h = int(max(y + 8, ORB_CY + ORB_R + 30))
         if h != getattr(self, "_h", None):
             self._h = h
@@ -340,6 +421,40 @@ class OrbApp:
         bottom = by1 + pad
         self._round_rect(x0, y, x1, bottom, 14, fill)
         c.tag_raise(tid)
+        return bottom + 8
+
+    def _results(self, y: float) -> float:
+        """Siri-style list of results: bold title, grey summary, small source; click opens the link."""
+        c = self.canvas
+        x0, x1, pad = 10, W - 10, 12
+        top = y
+        items_ids = []
+        cy = y + pad
+        for n, it in enumerate(self.results):
+            title = str(it.get("title", ""))[:90]
+            sub = str(it.get("subtitle", ""))[:150]
+            src = str(it.get("source") or _domain(it.get("url", "")))[:60]
+            ids = [c.create_text(x0 + pad, cy, text=title, fill=TXT, font=self.f_query, anchor="nw",
+                                 width=x1 - x0 - 2 * pad)]
+            cy = c.bbox(ids[-1])[3] + 2
+            if sub:
+                ids.append(c.create_text(x0 + pad, cy, text=sub, fill=SUB, font=self.f_answer, anchor="nw",
+                                         width=x1 - x0 - 2 * pad))
+                cy = c.bbox(ids[-1])[3] + 2
+            if src:
+                ids.append(c.create_text(x0 + pad, cy, text=src, fill="#7c84a8", font=self.f_small, anchor="nw"))
+                cy = c.bbox(ids[-1])[3]
+            item_top = c.bbox(ids[0])[1] - 4
+            self._hit.append((x0, item_top, x1, cy + 4, it.get("url", "")))
+            items_ids += ids
+            cy += 10
+            if n < len(self.results) - 1:
+                items_ids.append(c.create_line(x0 + pad, cy, x1 - pad, cy, fill="#3a3f5c"))
+                cy += 10
+        bottom = cy + pad - 10
+        self._round_rect(x0, top, x1, bottom, 14, CARD)
+        for i in items_ids:
+            c.tag_raise(i)
         return bottom + 8
 
     def _round_rect(self, x0, y0, x1, y1, r, fill):
@@ -367,11 +482,18 @@ class OrbApp:
         self.jobs.put(text)
         self.awake_until = time.time() + FOLLOW_UP_WINDOW
 
-    def wait_for_answer(self, timeout: float) -> str:
+    def begin_answer(self):
         while not self.answers.empty():
-            self.answers.get_nowait()
+            try:
+                self.answers.get_nowait()
+            except queue.Empty:
+                break
         self.waiting_answer.set()
-        self.set_state("awake", "Boliye…")
+
+    def wait_for_answer(self, timeout: float) -> str:
+        if not self.waiting_answer.is_set():
+            self.begin_answer()
+        self.set_state("awake", "Boliye… (haan / nahi)")
         try:
             return self.answers.get(timeout=timeout)
         except queue.Empty:
@@ -452,7 +574,8 @@ class OrbApp:
                 if not output_is_speakers():
                     mouth.stop()
                 return
-            self.set_state("hearing")
+            if self.busy.is_set() or self.waiting_answer.is_set() or time.time() < self.awake_until:
+                self.set_state("hearing")
 
         while not self.stop_all:
             if self.paused:
@@ -468,6 +591,9 @@ class OrbApp:
                 time.sleep(3)
                 continue
             if not heard:
+                if (self.state == "awake" and time.time() > self.awake_until and not self.busy.is_set()
+                        and not self.waiting_answer.is_set() and not mouth.speaking):
+                    self.set_state("listening")  # nothing said for a while -> sleep & hide
                 if self.state == "hearing":
                     self.set_state("thinking" if self.busy.is_set() else
                                    ("awake" if time.time() < self.awake_until else "listening"))
@@ -510,6 +636,11 @@ class OrbApp:
                 self.set_state("listening")
             else:  # command
                 self.submit(text)
+
+
+def _domain(url: str) -> str:
+    m = re.match(r"https?://(www\.)?([^/]+)", url or "")
+    return m.group(2) if m else ""
 
 
 def _friendly(status: str) -> str:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from .main import STOP_WORDS, contains_wake_word
+from .voice import NO_WORDS, YES_WORDS
 
 HUSH = re.compile(r"^\W*(ruko|ruk ja|ruk jao|bas|bas karo|chup|stop|wait|ek minute)\W*$", re.I)
 
@@ -24,6 +25,10 @@ def route(heard: str, cfg, *, over_voice: bool, near_voice: bool, speakers: bool
     heard = (heard or "").strip()
     if not heard:
         return "ignore", ""
+    # 0. she asked a question and is still reading it -> "haan"/"nahi" answers it right away
+    if (waiting_answer and (YES_WORDS.search(heard) or NO_WORDS.search(heard)) and len(heard.split()) <= 6
+            and not re.search(r"haan\W+ya\W+nahi", heard, re.I)):   # that's her own question echoing
+        return "answer", heard
     # 1. her own voice coming back through the mic
     if near_voice and said and _is_echo(heard, said):
         return "ignore", ""
@@ -54,8 +59,10 @@ def route(heard: str, cfg, *, over_voice: bool, near_voice: bool, speakers: bool
 
 def _is_echo(heard: str, said: str) -> bool:
     """True if what the mic heard is mostly Karishma's own sentence (speaker echo)."""
-    h = {w for w in heard.lower().split() if len(w) > 2}
+    h = {w.strip(".,!?।") for w in heard.lower().split() if len(w) > 2}
     if len(h) < 2:
         return False
-    s = {w for w in said.lower().split() if len(w) > 2}
+    s = {w.strip(".,!?।") for w in said.lower().split() if len(w) > 2}
+    if len(h) <= 3:  # short phrases: only an exact echo counts
+        return h <= s
     return len(h & s) / len(h) >= 0.5

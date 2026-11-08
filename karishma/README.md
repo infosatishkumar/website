@@ -70,9 +70,13 @@ Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kon
 - dhadakta = bol rahi hai
 - grey = paused, laal = problem
 
-Aapka sawaal aur Karishma ka jawab gole ke neeche card me dikhte hain (25 sec baad chhup jaate hain).
-**Gole par click** = Karishma ko jagao / bolte hue rok do. **Right-click** = menu (type karke poochho, pause,
-naya topic, settings, band karo). Gole ko drag karke kahin bhi rakh sakte hain.
+Aapka sawaal aur Karishma ka jawab gole ke neeche card me dikhte hain. Kisi vyakti / company / cheez ke baare me
+poochho to Siri jaisi result cards aati hain (click karo to link khulta hai).
+Kuch der koi baat na ho to gola **gayab** ho jaata hai; "Karishma" bolo to wapas aata hai.
+**Gole par click** (ya Dock me Karishma par click) = jagao + **typing box** khulta hai. **Right-click** = menu
+(pause, naya topic, settings, band karo). Gole ko drag karke kahin bhi rakh sakte hain.
+Confirm karte waqt Karishma sirf chhota sawaal bolti hai (command screen par dikhta hai); bolte-bolte bhi
+"haan" / "nahi" bol sakte ho.
 
 **Beech me bolna:** Karishma bol rahi ho ya kaam kar rahi ho aur aap bolne lagein, to wo turant chup hokar
 aapki nayi baat sunti hai aur naya kaam karti hai. "ruko" / "bas" bolne se sirf ruk jaati hai.

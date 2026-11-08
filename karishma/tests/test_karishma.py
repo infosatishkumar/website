@@ -30,7 +30,7 @@ class FakeIO:
         self.asked.append(q)
         return self.answers.pop(0) if self.answers else "ho gaya"
 
-    def confirm(self, summary):
+    def confirm(self, summary, detail=""):
         self.confirms.append(summary)
         return self.approve
 

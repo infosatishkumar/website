@@ -200,3 +200,58 @@ def test_output_device_detection(monkeypatch):
         monkeypatch.setitem(sys.modules, "sounddevice", fake_sd)
         v._OUT_CACHE["t"] = 0
         assert v.output_is_speakers() is expect, name
+
+
+# ---------- answering a question while she is still reading it ----------
+@pytest.mark.parametrize("heard,expected", [("haan", "answer"), ("Haan kar do", "answer"), ("nahi", "answer"),
+                                            ("haan ya nahi", "ignore")])
+def test_yes_no_while_she_asks(cfg, heard, expected):
+    said = "Ye command chalaun? Chrome band karke dobara kholna hai. Haan ya nahi?"
+    assert r(heard, cfg, over_voice=True, near_voice=True, waiting_answer=True, said=said)[0] == expected
+
+
+def test_other_talk_during_question_on_speakers_ignored(cfg):
+    said = "Ye command chalaun? Haan ya nahi?"
+    assert r("kya hua", cfg, over_voice=True, near_voice=True, waiting_answer=True, said=said)[0] == "ignore"
+
+
+def test_confirm_does_not_speak_the_command(tmp_path):
+    from karishma.config import Config
+    from karishma.tools import ToolRegistry, register_system_tools
+
+    spoken = []
+
+    class IO:
+        def say(self, t): spoken.append(t)
+        def ask(self, q): return ""
+        def confirm(self, summary, detail=""):
+            spoken.append(summary)
+            self.detail = detail
+            return False
+
+    io = IO()
+    reg = ToolRegistry()
+    register_system_tools(reg, Config(home=tmp_path), io)
+    reg.execute("run_shell", {"command": "pkill -x 'Google Chrome'; sleep 2; open -a 'Google Chrome'", "reason": "Chrome restart"})
+    assert spoken == ["Ye command chalaun? Chrome restart"]
+    assert "pkill" in io.detail and "pkill" not in spoken[0]
+
+
+def test_show_cards_tool_only_when_ui_supports_it(tmp_path):
+    from karishma.config import Config
+    from karishma.tools import ToolRegistry, register_system_tools
+
+    class Plain:
+        def say(self, t): pass
+        def ask(self, q): return ""
+        def confirm(self, s, detail=""): return False
+
+    class WithCards(Plain):
+        shown = None
+        def show_cards(self, items): WithCards.shown = items
+
+    reg = ToolRegistry(); register_system_tools(reg, Config(home=tmp_path), Plain())
+    assert "show_cards" not in reg.names()
+    reg = ToolRegistry(); register_system_tools(reg, Config(home=tmp_path), WithCards())
+    out, err = reg.execute("show_cards", {"items": [{"title": "Satish Kumar | Motion Designer", "url": "https://satishkumar.net"}]})
+    assert not err and WithCards.shown[0]["title"].startswith("Satish")

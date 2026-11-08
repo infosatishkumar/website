@@ -44,8 +44,10 @@ class TextIO:
         except EOFError:
             return ""
 
-    def confirm(self, summary: str) -> bool:
+    def confirm(self, summary: str, detail: str = "") -> bool:
         self.say(summary + " (haan / nahi)")
+        if detail:
+            print(f"   {detail}")
         try:
             return is_yes(input("🧑 Aap (haan/nahi): "))
         except EOFError:
@@ -72,7 +74,9 @@ class VoiceIO:
             self.say("Maine suna nahi, phir se boliye?")
         return ""
 
-    def confirm(self, summary: str) -> bool:
+    def confirm(self, summary: str, detail: str = "") -> bool:
+        if detail:
+            print(f"   {detail}")
         ans = self.ask(summary + " Haan ya nahi?")
         ok = is_yes(ans)
         print(f"   -> {'APPROVED' if ok else 'DECLINED'}")

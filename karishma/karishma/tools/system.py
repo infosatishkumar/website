@@ -76,7 +76,7 @@ def register_system_tools(reg: ToolRegistry, cfg: Config, io: UserIO) -> None:
         if BLOCKED.search(command):
             raise ToolError("Blocked: this command could destroy the system. Not allowed.")
         if not is_safe_shell(command):
-            if not io.confirm(f"Ye command chalaun? {reason}\n  $ {command}"):
+            if not io.confirm(f"Ye command chalaun? {reason or ''}".strip(), detail=f"$ {command}"):
                 return "User declined. Do not run it; ask what they want instead."
         timeout = max(1, min(int(timeout_seconds or 60), 600))
         try:
@@ -106,7 +106,7 @@ def register_system_tools(reg: ToolRegistry, cfg: Config, io: UserIO) -> None:
         if not cfg.is_mac:
             raise ToolError("AppleScript only works on macOS.")
         if is_risky_applescript(script):
-            if not io.confirm(f"Ye Mac action karun? {reason}\n{script}"):
+            if not io.confirm(f"Ye Mac par karun? {reason or ''}".strip(), detail=script):
                 return "User declined. Do not do it."
         proc = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=120)
         if proc.returncode != 0:
@@ -161,12 +161,41 @@ def register_system_tools(reg: ToolRegistry, cfg: Config, io: UserIO) -> None:
         answer = io.ask(question)
         return answer or "(no answer heard)"
 
+    if hasattr(io, "show_cards"):
+        @reg.add(
+            "show_cards",
+            "Show results on screen as Siri-style cards (title, short summary, source). Use it when the user "
+            "asks about a person, company, place, product, news, prices or options (flights, hotels, "
+            "restaurants) - 2 to 5 cards - then SPEAK only a 1-2 sentence summary.",
+            {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string", "description": "Bold first line"},
+                            "subtitle": {"type": "string", "description": "1-2 line summary"},
+                            "url": {"type": "string", "description": "Link opened when clicked"},
+                            "source": {"type": "string", "description": "e.g. linkedin.com, IndiGo"},
+                        },
+                        "required": ["title"],
+                    },
+                }
+            },
+            ["items"],
+        )
+        def show_cards(items: list) -> str:
+            io.show_cards(items if isinstance(items, list) else [])
+            return f"shown {len(items) if isinstance(items, list) else 0} card(s) on screen"
+
     @reg.add(
         "confirm_with_user",
         "REQUIRED before any booking, purchase, order, payment, sending a message/email, or deleting. "
-        "Speak a short summary (what, price, date, to whom) and get a yes/no.",
-        {"summary": {"type": "string", "description": "What will happen, incl. price/amount."}},
+        "summary = ONE short spoken sentence (what + price/date/to whom). Put long details (lists, "
+        "commands, addresses) in 'detail' - they are shown on screen, not read aloud.",
+        {"summary": {"type": "string", "description": "One short sentence, spoken."},
+         "detail": {"type": "string", "description": "Optional longer details, shown only."}},
         ["summary"],
     )
-    def confirm_with_user(summary: str) -> str:
-        return "APPROVED by user" if io.confirm(summary) else "DECLINED by user - do not proceed."
+    def confirm_with_user(summary: str, detail: str = "") -> str:
+        return "APPROVED by user" if io.confirm(summary, detail=detail) else "DECLINED by user - do not proceed."
