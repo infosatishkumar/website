@@ -74,7 +74,13 @@ class Browser:
                 kwargs["executable_path"] = self.cfg.browser_executable
             elif self.cfg.browser_channel == "chrome":
                 kwargs["channel"] = "chrome"
-            self._ctx = self._pw.chromium.launch_persistent_context(**kwargs)
+            try:
+                self._ctx = self._pw.chromium.launch_persistent_context(**kwargs)
+            except Exception:
+                if "channel" in kwargs or "executable_path" in kwargs:
+                    raise
+                # Playwright Chromium missing/unsupported -> use the installed Google Chrome.
+                self._ctx = self._pw.chromium.launch_persistent_context(channel="chrome", **kwargs)
             self._ctx.on("page", self._on_new_page)
         pages = [p for p in self._ctx.pages if not p.is_closed()]
         self._page = pages[-1] if pages else self._ctx.new_page()
