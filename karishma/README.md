@@ -63,9 +63,10 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 ./make_app.sh
 ```
 
-Phir **Launchpad / Applications → Karishma** kholiye. Upar menu bar me 🟣 icon aayega:
-🟣 sun rahi hai · 💭 soch rahi hai · 🔊 bol rahi hai · ⏸ paused.
-Icon par click karke: type karke poochhna, pause, naya topic, settings, band karna.
+Phir **Launchpad / Applications → Karishma** kholiye. Karishma ki window khulegi (Dock me bhi icon):
+gol "K" ka rang batata hai — bangni = sun rahi hai ('Karishma' boliye), hara = boliye, peela = soch rahi hai,
+gulabi = bol rahi hai, grey = paused, laal = problem. Window me poori baatchit dikhti hai, neeche type karke bhi
+poochh sakte hain, aur Pause / Naya topic / Settings / Band karo buttons hain.
 
 Mac on hote hi apne aap chalu ho, iske liye:
 

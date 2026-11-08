@@ -12,6 +12,8 @@ DEST="/Applications"
 [ -w "$DEST" ] || DEST="$HOME/Applications"
 mkdir -p "$DEST"
 APP="$DEST/Karishma.app"
+pkill -f "karishma.menubar" 2>/dev/null || true
+pkill -f "karishma.window" 2>/dev/null || true
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
@@ -19,7 +21,8 @@ cat > "$APP/Contents/MacOS/Karishma" <<SH
 #!/bin/bash
 mkdir -p "\$HOME/.karishma"
 cd "$DIR"
-exec "$DIR/.venv/bin/python" -m karishma.menubar >> "\$HOME/.karishma/app-output.log" 2>&1
+export KARISHMA_ICON="$APP/Contents/Resources/Karishma.png"
+exec "$DIR/.venv/bin/python" -m karishma.window >> "\$HOME/.karishma/app-output.log" 2>&1
 SH
 chmod +x "$APP/Contents/MacOS/Karishma"
 
@@ -36,7 +39,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>Karishma</string>
   <key>CFBundleIconFile</key><string>Karishma</string>
-  <key>LSUIElement</key><true/>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSMicrophoneUsageDescription</key><string>Karishma aapki awaaz sunne ke liye microphone use karti hai.</string>
   <key>NSAppleEventsUsageDescription</key><string>Karishma aapke kehne par Mac apps control karti hai.</string>
@@ -66,13 +68,14 @@ def png(size, path):
 for s in (16, 32, 128, 256, 512):
     png(s, os.path.join(iconset, f"icon_{s}x{s}.png"))
     png(s*2, os.path.join(iconset, f"icon_{s}x{s}@2x.png"))
+png(512, os.path.join(res, "Karishma.png"))
 subprocess.run(["iconutil", "-c", "icns", iconset, "-o", os.path.join(res, "Karishma.icns")], check=True)
 PY
 
 codesign --force --deep -s - "$APP" 2>/dev/null || true
 touch "$APP"
 echo "✅ Karishma.app ban gayi: $APP"
-echo "   Launchpad / Applications se kholiye. Menu bar (upar right) me 🟣 dikhega."
+echo "   Launchpad / Applications se kholiye - Karishma ki window khulegi aur Dock me icon aayega."
 if [ "$1" = "--login" ]; then
   osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$APP\", hidden:true}" >/dev/null \
     && echo "   Mac on hote hi Karishma apne aap chalu hogi."
