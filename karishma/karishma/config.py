@@ -33,6 +33,7 @@ class Config:
     user_name: str = ""
     user_city: str = ""
     listen_mode: str = "wake"  # wake | always | ptt   (terminal mode)
+    star_color: str = "gradient"  # orb sparkles: gradient | white
     mic_always_on: bool = True  # app: listen for "Karishma" all the time (macOS shows the orange mic dot)
     wake_words: tuple[str, ...] = ("karishma", "karisma", "kareeshma", "karishmaa", "करिश्मा", "krishma", "charisma", "carisma")
     browser_channel: str = "chromium"
@@ -79,6 +80,7 @@ def load_config(env_file: str | Path | None = None) -> Config:
         browser_executable=env("KARISHMA_BROWSER_EXECUTABLE") or None,
         browser_headless=_bool(env("KARISHMA_BROWSER_HEADLESS"), False),
         mic_always_on=_bool(env("KARISHMA_MIC_ALWAYS_ON"), True),
+        star_color=(env("KARISHMA_STAR_COLOR") or "gradient").lower(),
     )
     cfg.home.mkdir(parents=True, exist_ok=True)
     return cfg

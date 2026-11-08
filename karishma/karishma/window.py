@@ -140,7 +140,8 @@ class OrbApp:
         try:
             from .lottie_frames import render_frames
 
-            self.frames = [tk.PhotoImage(file=str(p)) for p in render_frames(self.cfg.home, size=int(ORB_R * 1.5))]
+            self.frames = [tk.PhotoImage(file=str(p)) for p in render_frames(self.cfg.home, size=int(ORB_R * 2.6),
+                                                                          color=self.cfg.star_color)]
         except Exception:  # noqa: BLE001  (falls back to the drawn orb)
             log.exception("could not load sparkle animation")
         self.canvas = tk.Canvas(self.root, width=W, height=120, bg=bg, highlightthickness=0, bd=0)
@@ -392,7 +393,9 @@ class OrbApp:
             self.cards_visible = True
 
         # ---- orb ----
-        if st == "paused":
+        if self.frames:
+            self._draw_stars(st)
+        elif st == "paused":
             r = ORB_R * 0.8
             c.create_oval(ORB_CX - r, ORB_CY - r, ORB_CX + r, ORB_CY + r, fill="#4b5563", outline="#9ca3af", width=2)
             c.create_text(ORB_CX, ORB_CY, text="⏸", fill="white", font=self.f_query)
@@ -418,22 +421,19 @@ class OrbApp:
                 gr = base + 6 + i * 5 + (lv * 10 if st in ("awake", "hearing") else 0) + 3 * math.sin(t * speed + i)
                 col = SIRI[(i + int(t * speed)) % len(SIRI)]
                 c.create_oval(ORB_CX - gr, ORB_CY - gr, ORB_CX + gr, ORB_CY + gr, outline=col, width=1.5)
-            if self.frames:
-                self._draw_sparkle_orb(c, t, st, base)
-            else:
-                # dark core
-                c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, fill="#0b0b1a", outline="")
-                # swirling colour blobs
-                for i, col in enumerate(SIRI[:4]):
-                    ang = t * speed + i * (math.pi / 2)
-                    off = base * (0.32 + amp * math.sin(t * 2.1 + i))
-                    br = base * (0.62 + amp * math.cos(t * 1.7 + i * 1.3) + lv * 0.2)
-                    bx, by = ORB_CX + off * math.cos(ang), ORB_CY + off * math.sin(ang)
-                    c.create_oval(bx - br, by - br, bx + br, by + br, fill=col, outline="")
-                # glossy highlight + rim
-                c.create_oval(ORB_CX - base * 0.45, ORB_CY - base * 0.75, ORB_CX + base * 0.1, ORB_CY - base * 0.35,
-                              fill="#ffffff", outline="")
-                c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#c4b5fd", width=2)
+            # dark core
+            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, fill="#0b0b1a", outline="")
+            # swirling colour blobs
+            for i, col in enumerate(SIRI[:4]):
+                ang = t * speed + i * (math.pi / 2)
+                off = base * (0.32 + amp * math.sin(t * 2.1 + i))
+                br = base * (0.62 + amp * math.cos(t * 1.7 + i * 1.3) + lv * 0.2)
+                bx, by = ORB_CX + off * math.cos(ang), ORB_CY + off * math.sin(ang)
+                c.create_oval(bx - br, by - br, bx + br, by + br, fill=col, outline="")
+            # glossy highlight + rim
+            c.create_oval(ORB_CX - base * 0.45, ORB_CY - base * 0.75, ORB_CX + base * 0.1, ORB_CY - base * 0.35,
+                          fill="#ffffff", outline="")
+            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#c4b5fd", width=2)
 
         y = ORB_CY + ORB_R + 26
         if typing_open:
@@ -467,22 +467,15 @@ class OrbApp:
         c.tag_raise(tid)
         return bottom + 8
 
-    def _draw_sparkle_orb(self, c, t, st, base):
-        """Gradient disc with the Lottie sparkle animation playing inside it."""
+    def _draw_stars(self, st):
+        """Only the Lottie sparkle animation - its speed shows what Karishma is doing."""
         now = time.time()
         dt = min(0.2, now - getattr(self, "_last_frame_t", now))
         self._last_frame_t = now
-        speed = {"listening": 0.6, "awake": 1.0, "hearing": 1.3, "thinking": 2.2, "speaking": 1.6}.get(st, 1.0)
+        speed = {"listening": 0.6, "awake": 1.0, "hearing": 1.4, "thinking": 2.4, "speaking": 1.7,
+                 "paused": 0.0, "error": 0.3}.get(st, 1.0)
         self._fi = (getattr(self, "_fi", 0.0) + speed * dt * 25) % len(self.frames)
-        k = (math.sin(t * 0.7) + 1) / 2
-        stops = [_mix("#4c1d95", "#1e3a8a", k), _mix("#7c3aed", "#2563eb", k), _mix("#a855f7", "#3b82f6", k),
-                 _mix("#c084fc", "#60a5fa", k)]
-        for i, col in enumerate(stops):
-            r = base * (1 - i * 0.16)
-            ox, oy = -base * 0.06 * i, -base * 0.08 * i   # light from the top-left
-            c.create_oval(ORB_CX + ox - r, ORB_CY + oy - r, ORB_CX + ox + r, ORB_CY + oy + r, fill=col, outline="")
-        c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#ddd6fe", width=1.5)
-        c.create_image(ORB_CX, ORB_CY + 1, image=self.frames[int(self._fi)])
+        self.canvas.create_image(ORB_CX, ORB_CY, image=self.frames[int(self._fi)])
 
     def _results(self, y: float) -> float:
         """Siri-style list of results: bold title, grey summary, small source; click opens the link."""
@@ -704,13 +697,6 @@ class OrbApp:
                 self.set_state("listening")
             else:  # command
                 self.submit(text)
-
-
-def _mix(c1: str, c2: str, k: float) -> str:
-    k = max(0.0, min(1.0, k))
-    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
-    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
-    return "#%02x%02x%02x" % tuple(round(x + (y - x) * k) for x, y in zip(a, b))
 
 
 def _domain(url: str) -> str:
