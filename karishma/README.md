@@ -63,8 +63,8 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 ./make_app.sh
 ```
 
-Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Karishma ka cute face aata hai
-(aankhen jhapakti hain, idhar-udhar dekhti hain, bolte waqt muh hilta hai, sochte waqt upar dekhti hai, khush hoke ^ ^).
+Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Siri jaisa animated gola aata hai
+(sunte waqt awaaz ke saath hilta hai, sochte waqt tez ghoomta hai, bolte waqt dhadakta hai).
 
 **Mic sirf bulane par on hota hai** (orange mic dot hamesha nahi rehta), bilkul Siri jaisa. Bulane ke tareeke:
 - **"Hey Siri, Karishma"** — iske liye ek baar `./make_app.sh --siri` chalaiye aur Shortcuts app me *Add Shortcut*
