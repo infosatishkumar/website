@@ -1,0 +1,124 @@
+# 🟣 Karishma — aapki apni AI assistant (MacBook ke liye)
+
+Karishma ek **voice AI agent** hai jo aapke MacBook (2019 Intel bhi) par chalti hai.
+Aap bolte ho, wo sunti hai, samajhti hai (**Claude** brain), kaam karti hai, aur
+**ElevenLabs** ki awaaz me jawab deti hai — Hindi, Hinglish ya English me.
+
+## Kya-kya kar sakti hai
+
+| Aap bolo… | Karishma kya karegi |
+|---|---|
+| "Karishma, kal Delhi se Mumbai ki sabse sasti flight dhundo" | Web search + browser me MakeMyTrip/Cleartrip khol ke compare karegi, price batayegi |
+| "Karishma, 15 tareekh ki Rajdhani me 2 tickets book karo" | IRCTC kholegi, details bharegi, **aapse confirm** karegi, payment/OTP aap khud karoge |
+| "Swiggy se paneer biryani order kar do" | Swiggy kholegi, item cart me dalegi, total batake confirm karegi |
+| "BookMyShow pe aaj shaam ki movie dikhao" | Shows dhund ke batayegi, seat choose karwayegi |
+| "Volume 30 kar do", "Spotify chalao", "dark mode on" | AppleScript se Mac control |
+| "Kal 9 baje doctor ka reminder lagao" | Reminders / Calendar me add |
+| "Downloads folder me sabse badi files kaunsi hain?" | Shell command chala ke batayegi |
+| "Screen pe kya dikh raha hai?" | Screenshot le ke dekhegi aur samjhayegi |
+| "Bitcoin ka aaj ka rate?", "Is topic pe research karo" | Live web research |
+| "Yaad rakhna mera ghar Jaipur me hai" | Hamesha ke liye yaad rakhegi |
+
+### Safety (aapke paise aur data ke liye)
+- Koi bhi **booking / order / payment / message bhejna / delete** — pehle aapse **"haan ya nahi"** puchegi.
+- "Pay", "Place Order", "Book Now" jaise buttons code-level par bhi lock hain — bina aapke "haan" ke click nahi honge.
+- **Card number, CVV, OTP, UPI PIN, password kabhi type nahi karegi** — ye browser window me aap khud bharoge.
+- Khatarnak commands (jaise `rm -rf /`, disk erase) hamesha blocked hain. Kuch bhi system change karne wala command pehle aapko dikhayegi.
+
+## Setup (sirf ek baar, ~10 minute)
+
+1. Ye `karishma` folder apne Mac me rakho (jaise `~/karishma`).
+2. **Terminal** kholo aur chalao:
+
+```bash
+cd ~/karishma
+```
+
+```bash
+./setup_mac.sh
+```
+
+3. Apni keys `.env` file me daalo:
+
+```bash
+open -e .env
+```
+
+   - `ANTHROPIC_API_KEY` → https://console.anthropic.com (brain)
+   - `ELEVENLABS_API_KEY` → https://elevenlabs.io/app/settings/api-keys (voice)
+   - `ELEVENLABS_VOICE_ID` → ElevenLabs Voice Library me koi female Hindi voice choose karke uska ID (khaali chhodoge to Karishma khud ek female/Hindi voice chun legi)
+   - `KARISHMA_USER_NAME`, `KARISHMA_USER_CITY` → aapka naam aur shehar
+
+4. Setup check karo:
+
+```bash
+./run.sh --check
+```
+
+## Chalana
+
+Voice mode ("Karishma" bol ke jagao):
+
+```bash
+./run.sh
+```
+
+Ya Finder me **Karishma.command** pe double-click.
+
+Keyboard se type karke (bina mic):
+
+```bash
+./run.sh --text
+```
+
+Type bhi karo aur jawab awaaz me bhi suno:
+
+```bash
+./run.sh --text --speak
+```
+
+Listening modes (`.env` me `KARISHMA_LISTEN_MODE` ya `--mode`):
+- `wake` (default) — "**Karishma**, …" bolne par sunti hai; jawab ke baad 45 second tak bina naam liye follow-up sun leti hai.
+- `always` — har baat sunti hai.
+- `ptt` — Enter dabao, phir bolo.
+
+Kuch khaas commands: "**naya topic**" (nayi conversation), "**bye**" (so jao), Ctrl+C (band).
+
+## Mac permissions (pehli baar)
+System Settings → Privacy & Security me **Terminal** ko allow karo:
+- **Microphone** — sunne ke liye
+- **Accessibility** + **Automation** — apps control karne ke liye
+- **Screen Recording** — screen dekhne ke liye
+
+## Booking/ordering kaise kaam karti hai
+Karishma ek alag browser window kholti hai (profile `~/.karishma/browser-profile` me save hota hai).
+Pehli baar IRCTC / Amazon / Swiggy pe **aap khud login kar lo** — uske baad login yaad rahega.
+Payment page aane par Karishma ruk ke aapko bolegi — aap OTP/PIN daalo aur "ho gaya" bolo.
+
+> Purana macOS (13 se pehle) ho aur Chromium na chale to `.env` me `KARISHMA_BROWSER_CHANNEL=chrome` likho (Google Chrome installed hona chahiye).
+
+## Settings
+| Variable | Default | Matlab |
+|---|---|---|
+| `KARISHMA_MODEL` | `claude-opus-5-5` | Claude model |
+| `KARISHMA_EFFORT` | `medium` | `low` = tez jawab, `high` = zyada soch ke |
+| `ELEVENLABS_TTS_MODEL` | `eleven_multilingual_v2` | Awaaz ka model (Hindi support) |
+| `ELEVENLABS_STT_MODEL` | `scribe_v1` | Sunne ka model |
+
+Kharcha: har sawaal Claude API + ElevenLabs credits use karta hai. `wake` mode me har boli hui line
+ElevenLabs speech-to-text pe jaati hai (wake word check ke liye) — kharcha kam rakhna ho to `ptt` mode use karo.
+
+## Kya nahi kar sakti
+- Phone call / WhatsApp on phone — sirf Mac pe jo ho sakta hai wahi.
+- OTP, captcha, payment PIN — ye aap karoge (security ke liye jaan-boojh ke).
+
+## Developer notes
+```
+karishma/
+  main.py      voice/text loop, wake word
+  brain.py     Claude agent loop (tools, web search, adaptive thinking)
+  voice.py     mic recording, ElevenLabs STT/TTS, macOS `say` fallback
+  tools/       system.py (shell, AppleScript, screenshot), browser.py (Playwright), memory.py
+tests/         pytest (Linux/Mac par chalte hain, API key nahi chahiye)
+```
+Logs: `~/.karishma/karishma.log`. Tests: `.venv/bin/python -m pytest -q`
