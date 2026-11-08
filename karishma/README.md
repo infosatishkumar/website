@@ -55,7 +55,25 @@ open -e .env
 ./run.sh --check
 ```
 
-## Chalana
+## App ki tarah chalana (Terminal ki zarurat nahi)
+
+Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar nahi bani to:
+
+```bash
+./make_app.sh
+```
+
+Phir **Launchpad / Applications → Karishma** kholiye. Upar menu bar me 🟣 icon aayega:
+🟣 sun rahi hai · 💭 soch rahi hai · 🔊 bol rahi hai · ⏸ paused.
+Icon par click karke: type karke poochhna, pause, naya topic, settings, band karna.
+
+Mac on hote hi apne aap chalu ho, iske liye:
+
+```bash
+./make_app.sh --login
+```
+
+## Terminal se chalana
 
 Voice mode ("Karishma" bol ke jagao):
 

@@ -46,7 +46,8 @@ if [ ! -f .env ]; then
   echo "    open -e $(pwd)/.env"
 fi
 
-chmod +x Karishma.command run.sh
+chmod +x Karishma.command run.sh make_app.sh
+./make_app.sh || echo "!! App banane me dikkat - ./make_app.sh dobara chalaiye."
 echo ""
 echo "✅ Setup complete!  Ab chalaiye:  ./run.sh   (ya Finder me Karishma.command double-click)"
 echo "   Pehli baar Mac permissions maangega: Microphone, Accessibility, Automation, Screen Recording - sab Allow kariye."
