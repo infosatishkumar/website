@@ -255,3 +255,18 @@ def test_show_cards_tool_only_when_ui_supports_it(tmp_path):
     reg = ToolRegistry(); register_system_tools(reg, Config(home=tmp_path), WithCards())
     out, err = reg.execute("show_cards", {"items": [{"title": "Satish Kumar | Motion Designer", "url": "https://satishkumar.net"}]})
     assert not err and WithCards.shown[0]["title"].startswith("Satish")
+
+
+def test_sparkle_vectors(tmp_path):
+    """The Lottie stars become polygons (drawn reliably on macOS) - 3 stars in every frame."""
+    pytest.importorskip("rlottie_python")
+    from karishma.lottie_frames import vector_frames
+
+    frames = vector_frames(tmp_path, size=60, step=25)
+    assert len(frames) >= 9
+    for fr in frames:
+        assert len(fr) == 3
+        for pts, area in fr:
+            assert len(pts) >= 6 and area > 0
+            assert all(-1 <= v <= 61 for v in pts)
+    assert vector_frames(tmp_path, size=60, step=25) == frames  # cached

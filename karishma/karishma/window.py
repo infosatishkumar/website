@@ -136,12 +136,13 @@ class OrbApp:
                 self.root.iconphoto(True, self._icon)
             except tk.TclError:
                 pass
-        self.frames: list = []
+        self.frames: list = []   # each frame = list of (polygon points, area) - one per star
+        self.star_size = int(ORB_R * 2.7)
         try:
-            from .lottie_frames import render_frames
+            from .lottie_frames import vector_frames
 
-            self.frames = [tk.PhotoImage(file=str(p)) for p in render_frames(self.cfg.home, size=int(ORB_R * 2.6),
-                                                                          color=self.cfg.star_color)]
+            self.frames = vector_frames(self.cfg.home, size=self.star_size)
+            log.info("sparkle animation: %d frames", len(self.frames))
         except Exception:  # noqa: BLE001  (falls back to the drawn orb)
             log.exception("could not load sparkle animation")
         self.canvas = tk.Canvas(self.root, width=W, height=120, bg=bg, highlightthickness=0, bd=0)
@@ -475,7 +476,18 @@ class OrbApp:
         speed = {"listening": 0.6, "awake": 1.0, "hearing": 1.4, "thinking": 2.4, "speaking": 1.7,
                  "paused": 0.0, "error": 0.3}.get(st, 1.0)
         self._fi = (getattr(self, "_fi", 0.0) + speed * dt * 25) % len(self.frames)
-        self.canvas.create_image(ORB_CX, ORB_CY, image=self.frames[int(self._fi)])
+        if self.cfg.star_color == "white":
+            fills, outline = ["#ffffff"] * 3, "#a78bfa"
+        else:
+            fills, outline = ["#d946ef", "#8b5cf6", "#3b82f6"], ""
+        x0, y0 = ORB_CX - self.star_size / 2, ORB_CY - self.star_size / 2
+        polys = self.frames[int(self._fi)]
+        # biggest star first; the small ones keep their colour by side (left / right), so no flicker
+        ordered = polys[:1] + sorted(polys[1:], key=lambda p: sum(p[0][0::2]) / max(1, len(p[0]) // 2))
+        for n, (pts, _area) in enumerate(ordered):
+            moved = [v + (x0 if i % 2 == 0 else y0) for i, v in enumerate(pts)]
+            self.canvas.create_polygon(moved, smooth=True, fill=fills[min(n, 2)],
+                                       outline=outline, width=1 if outline else 0)
 
     def _results(self, y: float) -> float:
         """Siri-style list of results: bold title, grey summary, small source; click opens the link."""
