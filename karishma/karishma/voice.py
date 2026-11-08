@@ -140,6 +140,7 @@ class Ears:
         self._client = ElevenLabs(api_key=cfg.elevenlabs_api_key)
         self.threshold = 500.0
         self.mic_blocked = False
+        self.last_error = ""
         self.calibrate()
 
     def calibrate(self, seconds: float = 1.0) -> None:
@@ -207,4 +208,12 @@ class Ears:
             return self.transcribe(wav)
         except Exception as e:  # noqa: BLE001
             log.warning("STT failed: %s", e)
+            msg = str(e)
+            if "401" in msg or "permission" in msg.lower() or "unauthorized" in msg.lower():
+                self.last_error = ("ElevenLabs key ko 'Speech to Text' ki permission nahi hai. "
+                                   "elevenlabs.io > API Keys me key edit karke Speech to Text ON kariye.")
+            elif "quota" in msg.lower() or "credits" in msg.lower():
+                self.last_error = "ElevenLabs credits khatam ho gaye hain."
+            else:
+                self.last_error = f"Sunne me error: {msg[:150]}"
             return ""

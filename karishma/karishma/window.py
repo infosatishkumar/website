@@ -279,6 +279,11 @@ class KarishmaWindow:
                 awake = cfg.listen_mode == "always" or time.time() < awake_until
                 self.post("state", "awake" if awake else "listening")
                 heard = ears.listen(max_wait=2)
+                if ears.last_error:
+                    self.post("chat", "info", ears.last_error)
+                    self.post("state", "error", "sun nahi pa rahi")
+                    ears.last_error = ""
+                    time.sleep(3)
                 if not heard or self.paused:
                     continue
                 request = heard
