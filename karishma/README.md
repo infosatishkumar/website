@@ -63,8 +63,9 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 ./make_app.sh
 ```
 
-Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Siri jaisa animated gola aata hai
-(sunte waqt awaaz ke saath hilta hai, sochte waqt tez ghoomta hai, bolte waqt dhadakta hai).
+Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Karishma ka gola aata hai: chamakti bangni-neeli disc ke andar
+animated AI sparkles (✦, `karishma/assets/karishma_orb.json` Lottie). Bahar ki rings sunte waqt awaaz ke saath
+hilti hain; sochte waqt sparkles tez chalte hain, bolte waqt disc dhadakti hai.
 
 **Bulana:** sirf **"Karishma"** boliye (ya "Karishma, YouTube kholo" ek saath). "bye" bolne par wo chhup jaati hai,
 aur ~15 sec chup rehne par bhi. Face/gole par ya Dock me **K** par click = typing box.
