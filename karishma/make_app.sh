@@ -17,13 +17,51 @@ pkill -f "karishma.window" 2>/dev/null || true
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-cat > "$APP/Contents/MacOS/Karishma" <<SH
+mkdir -p "$HOME/.karishma"
+ICON="$APP/Contents/Resources/Karishma.png"
+
+# A tiny native launcher: Python runs as its CHILD, so macOS asks microphone
+# permission for "Karishma" (a shell-script launcher never gets the popup).
+if xcode-select -p >/dev/null 2>&1 && command -v cc >/dev/null 2>&1; then
+  cat > /tmp/karishma_launcher.c <<C
+#include <fcntl.h>
+#include <spawn.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
+extern char **environ;
+int main(void) {
+    const char *dir = "$DIR";
+    char py[4096], logp[4096];
+    setenv("KARISHMA_ICON", "$ICON", 1);
+    if (chdir(dir) != 0) return 1;
+    snprintf(py, sizeof py, "%s/.venv/bin/python", dir);
+    snprintf(logp, sizeof logp, "%s/.karishma/app-output.log", getenv("HOME"));
+    posix_spawn_file_actions_t fa;
+    posix_spawn_file_actions_init(&fa);
+    posix_spawn_file_actions_addopen(&fa, 1, logp, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    posix_spawn_file_actions_adddup2(&fa, 1, 2);
+    char *args[] = {py, "-m", "karishma.window", NULL};
+    pid_t pid;
+    if (posix_spawn(&pid, py, &fa, NULL, args, environ) != 0) return 1;
+    int st;
+    waitpid(pid, &st, 0);
+    return 0;
+}
+C
+  cc -O2 -o "$APP/Contents/MacOS/Karishma" /tmp/karishma_launcher.c
+  LAUNCHER=native
+else
+  cat > "$APP/Contents/MacOS/Karishma" <<SH
 #!/bin/bash
 mkdir -p "\$HOME/.karishma"
 cd "$DIR"
-export KARISHMA_ICON="$APP/Contents/Resources/Karishma.png"
+export KARISHMA_ICON="$ICON"
 exec "$DIR/.venv/bin/python" -m karishma.window >> "\$HOME/.karishma/app-output.log" 2>&1
 SH
+  LAUNCHER=script
+fi
 chmod +x "$APP/Contents/MacOS/Karishma"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -39,6 +77,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>Karishma</string>
   <key>CFBundleIconFile</key><string>Karishma</string>
+  <key>LSUIElement</key><true/>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSMicrophoneUsageDescription</key><string>Karishma aapki awaaz sunne ke liye microphone use karti hai.</string>
   <key>NSAppleEventsUsageDescription</key><string>Karishma aapke kehne par Mac apps control karti hai.</string>
@@ -73,8 +112,13 @@ subprocess.run(["iconutil", "-c", "icns", iconset, "-o", os.path.join(res, "Kari
 PY
 
 codesign --force --deep -s - "$APP" 2>/dev/null || true
+tccutil reset Microphone local.karishma.assistant >/dev/null 2>&1 || true
 touch "$APP"
-echo "✅ Karishma.app ban gayi: $APP"
+echo "✅ Karishma.app ban gayi: $APP  (launcher: $LAUNCHER)"
+if [ "$LAUNCHER" = script ]; then
+  echo "   !! Mic permission ke liye Apple developer tools chahiye. Chalaiye:  xcode-select --install"
+  echo "      Install hone ke baad ./make_app.sh dobara chalaiye."
+fi
 echo "   Launchpad / Applications se kholiye - Karishma ki window khulegi aur Dock me icon aayega."
 if [ "$1" = "--login" ]; then
   osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$APP\", hidden:true}" >/dev/null \
