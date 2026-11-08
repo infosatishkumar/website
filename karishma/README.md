@@ -66,16 +66,13 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Siri jaisa animated gola aata hai
 (sunte waqt awaaz ke saath hilta hai, sochte waqt tez ghoomta hai, bolte waqt dhadakta hai).
 
-**Mic sirf bulane par on hota hai** (orange mic dot hamesha nahi rehta), bilkul Siri jaisa. Bulane ke tareeke:
-- **"Hey Siri, Karishma"** — iske liye ek baar `./make_app.sh --siri` chalaiye aur Shortcuts app me *Add Shortcut*
-  dabaiye (Shortcuts > Settings > Advanced > *Allow Running Scripts* ON hona chahiye)
-- **Keyboard shortcut** — Shortcuts app me "Karishma" shortcut > ⓘ > *Add Keyboard Shortcut* (jaise ⌥ Space)
-- Face par ya Dock me **K** par click (typing box bhi khulta hai)
+**Bulana:** sirf **"Karishma"** boliye (ya "Karishma, YouTube kholo" ek saath). "bye" bolne par wo chhup jaati hai,
+aur ~15 sec chup rehne par bhi. Face/gole par ya Dock me **K** par click = typing box.
+Note: mic "Karishma" sunne ke liye on rehta hai, isliye Mac upar **orange mic dot** dikhata hai (Apple ka niyam,
+har app ke liye). Dot nahi chahiye to `.env` me `KARISHMA_MIC_ALWAYS_ON=false` + `./make_app.sh --siri`:
+tab "Hey Siri, Karishma" / keyboard shortcut / click se bulana hoga.
 
-Baat khatam hone ke ~10 second baad mic band aur face gayab. Agar hamesha "Karishma" bolkar jagana ho
-(tab orange dot hamesha rahega) to `.env` me `KARISHMA_MIC_ALWAYS_ON=true`.
-
-Jawab face ke neeche card me dikhte hain; kisi vyakti / company / cheez ke baare me poochho to Siri jaisi
+Jawab gole ke neeche card me dikhte hain; kisi vyakti / company / cheez ke baare me poochho to Siri jaisi
 result cards (click = link khulta hai). **Right-click** = menu (pause, naya topic, settings, band karo).
 Face ko drag karke kahin bhi rakh sakte hain. Confirm karte waqt Karishma sirf chhota sawaal bolti hai
 (command screen par dikhta hai); bolte-bolte bhi "haan" / "nahi" bol sakte ho.

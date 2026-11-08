@@ -3,7 +3,7 @@
 wake word brings her back, typing box, Siri-style result cards."""
 import os, sys, time, threading
 os.environ.update(KARISHMA_HOME="/tmp/karishma_e2e2", ANTHROPIC_API_KEY="x", ELEVENLABS_API_KEY="y",
-                  KARISHMA_USER_NAME="Satish")
+                  KARISHMA_USER_NAME="Satish", KARISHMA_MIC_ALWAYS_ON="false")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import karishma.window as w
 import karishma.voice as v

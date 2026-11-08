@@ -274,7 +274,7 @@ class OrbApp:
     @property
     def follow_up(self) -> float:
         # On-demand mode closes the mic soon after the conversation, like Siri.
-        return FOLLOW_UP_WINDOW if self.cfg.mic_always_on else min(FOLLOW_UP_WINDOW, 10)
+        return min(FOLLOW_UP_WINDOW, 15 if self.cfg.mic_always_on else 10)
 
     def conversation_active(self) -> bool:
         return (self.cfg.mic_always_on or self.busy.is_set() or self.waiting_answer.is_set()
@@ -660,8 +660,8 @@ class OrbApp:
                 self.show_query(heard)
                 self.answers.put(text)
             elif action == "wake":
+                self.wake(sound=True)
                 self.show_query(heard)
-                self.awake_until = time.time() + self.follow_up
                 self.set_state("awake", "Ji, boliye…")
             elif action == "hush":
                 if self.brain:
