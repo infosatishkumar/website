@@ -120,7 +120,16 @@ if [ "$LAUNCHER" = script ]; then
   echo "      Install hone ke baad ./make_app.sh dobara chalaiye."
 fi
 echo "   Launchpad / Applications se kholiye - Karishma ki window khulegi aur Dock me icon aayega."
-if [ "$1" = "--login" ]; then
+for arg in "$@"; do
+  if [ "$arg" = "--siri" ]; then
+    echo "==> 'Hey Siri, Karishma' shortcut bana rahi hoon..."
+    if ! "$DIR/.venv/bin/python" -m karishma.siri_shortcut "$DIR"; then
+      echo "   Shortcut khud banana padega (2 minute): Shortcuts app > + > 'Run Shell Script' action >"
+      echo "   script:  touch ~/.karishma/wake   > naam 'Karishma' rakhiye."
+    fi
+  fi
+done
+if [[ " $* " == *" --login "* ]]; then
   osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"$APP\", hidden:true}" >/dev/null \
     && echo "   Mac on hote hi Karishma apne aap chalu hogi."
 fi

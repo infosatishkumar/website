@@ -32,7 +32,8 @@ class Config:
     effort: str = "low"
     user_name: str = ""
     user_city: str = ""
-    listen_mode: str = "wake"  # wake | always | ptt
+    listen_mode: str = "wake"  # wake | always | ptt   (terminal mode)
+    mic_always_on: bool = False  # app: listen for "Karishma" all the time (shows orange mic dot)
     wake_words: tuple[str, ...] = ("karishma", "karisma", "करिश्मा", "krishma", "charisma")
     browser_channel: str = "chromium"
     browser_executable: str | None = None
@@ -77,6 +78,7 @@ def load_config(env_file: str | Path | None = None) -> Config:
         browser_channel=(env("KARISHMA_BROWSER_CHANNEL") or "chromium").lower(),
         browser_executable=env("KARISHMA_BROWSER_EXECUTABLE") or None,
         browser_headless=_bool(env("KARISHMA_BROWSER_HEADLESS"), False),
+        mic_always_on=_bool(env("KARISHMA_MIC_ALWAYS_ON"), False),
     )
     cfg.home.mkdir(parents=True, exist_ok=True)
     return cfg

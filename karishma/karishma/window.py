@@ -35,8 +35,8 @@ log = logging.getLogger("karishma.window")
 
 
 W = 380                # window width
-ORB_R = 30             # orb base radius
-ORB_CX, ORB_CY = W - 52, 52
+ORB_R = 34             # face base radius
+ORB_CX, ORB_CY = W - 58, 58
 CARD = "#1f2233"
 CARD2 = "#2a2e45"
 TXT = "#f4f4fb"
@@ -111,6 +111,11 @@ class OrbApp:
         self.last_activity = time.time()
         self.t0 = time.time()
         self.smooth_level = 0.0
+        self._next_blink = time.time() + 2
+        self._blink_start = 0.0
+        self._next_look = 0.0
+        self._look_target = (0.0, 0.0)
+        self._look = [0.0, 0.0]
 
         self._build_window()
         threading.Thread(target=self._startup, daemon=True).start()
@@ -171,13 +176,7 @@ class OrbApp:
         self.root.after(33, self._tick)
 
     def wake_and_type(self):
-        if self.mouth and self.mouth.speaking:
-            self.mouth.stop()
-        self.awake_until = time.time() + FOLLOW_UP_WINDOW
-        self.cards_visible = True
-        self.last_activity = time.time()
-        if self.state not in ("thinking", "speaking", "error", "paused"):
-            self.set_state("awake")
+        self.wake(sound=False)
         self.open_typing()
 
     def open_typing(self):
@@ -277,12 +276,46 @@ class OrbApp:
         finally:
             os._exit(0)
 
+    @property
+    def follow_up(self) -> float:
+        # On-demand mode closes the mic soon after the conversation, like Siri.
+        return FOLLOW_UP_WINDOW if self.cfg.mic_always_on else min(FOLLOW_UP_WINDOW, 10)
+
+    def conversation_active(self) -> bool:
+        return (self.cfg.mic_always_on or self.busy.is_set() or self.waiting_answer.is_set()
+                or bool(self.mouth and self.mouth.speaking) or time.time() < self.awake_until
+                or self.typing is not None)
+
+    def _check_wake_file(self):
+        """Siri / keyboard-shortcut trigger: `touch ~/.karishma/wake` (optionally with a command inside)."""
+        f = self.cfg.home / "wake"
+        if f.exists():
+            try:
+                text = f.read_text(encoding="utf-8").strip()
+                f.unlink()
+            except OSError:
+                text = ""
+            self.wake(sound=not text)
+            if text:
+                self.submit(text)
+
+    def wake(self, sound: bool = True):
+        if self.mouth and self.mouth.speaking:
+            self.mouth.stop()
+        self.awake_until = time.time() + self.follow_up
+        self.cards_visible = True
+        self.last_activity = time.time()
+        if self.state not in ("thinking", "speaking", "error", "paused"):
+            self.set_state("awake")
+        if sound and Path("/System/Library/Sounds/Tink.aiff").exists():
+            subprocess.Popen(["afplay", "/System/Library/Sounds/Tink.aiff"])
+
     # --- thread-safe setters ---
     def set_state(self, state: str, status: str | None = None):
         self.state = state
         labels = {
             "starting": "Shuru ho rahi hoon…",
-            "listening": "'Karishma' boliye",
+            "listening": "So rahi hoon",
             "awake": "Sun rahi hoon…",
             "hearing": "Sun rahi hoon…",
             "thinking": "Soch rahi hoon…",
@@ -314,6 +347,12 @@ class OrbApp:
 
     # --- drawing ---
     def _tick(self):
+        self._ticks = getattr(self, "_ticks", 0) + 1
+        if self._ticks % 9 == 0:
+            try:
+                self._check_wake_file()
+            except Exception:  # noqa: BLE001
+                log.exception("wake check failed")
         try:
             self._draw()
         except Exception:  # noqa: BLE001
@@ -350,46 +389,7 @@ class OrbApp:
             self._h = None
             self.cards_visible = True
 
-        # ---- orb ----
-        if st == "paused":
-            r = ORB_R * 0.8
-            c.create_oval(ORB_CX - r, ORB_CY - r, ORB_CX + r, ORB_CY + r, fill="#4b5563", outline="#9ca3af", width=2)
-            c.create_text(ORB_CX, ORB_CY, text="⏸", fill="white", font=self.f_query)
-        elif st == "error":
-            r = ORB_R * (0.9 + 0.05 * math.sin(t * 3))
-            c.create_oval(ORB_CX - r, ORB_CY - r, ORB_CX + r, ORB_CY + r, fill="#dc2626", outline="#fca5a5", width=2)
-            c.create_text(ORB_CX, ORB_CY, text="!", fill="white", font=self.f_query)
-        else:
-            if st == "listening":
-                speed, amp, size = 0.8, 0.05, 0.78 + lv * 0.25
-            elif st in ("awake", "hearing"):
-                speed, amp, size = 1.6, 0.08, 0.95 + lv * 0.55
-            elif st == "thinking":
-                speed, amp, size = 4.5, 0.10, 0.95
-            elif st == "speaking":
-                speed, amp = 2.4, 0.12
-                size = 1.0 + 0.12 * abs(math.sin(t * 7.0)) + 0.06 * random.random()
-            else:
-                speed, amp, size = 1.0, 0.05, 0.85
-            base = ORB_R * size
-            # outer glow rings
-            for i in range(3):
-                gr = base + 6 + i * 5 + (lv * 10 if st in ("awake", "hearing") else 0) + 3 * math.sin(t * speed + i)
-                col = SIRI[(i + int(t * speed)) % len(SIRI)]
-                c.create_oval(ORB_CX - gr, ORB_CY - gr, ORB_CX + gr, ORB_CY + gr, outline=col, width=1.5)
-            # dark core
-            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, fill="#0b0b1a", outline="")
-            # swirling colour blobs
-            for i, col in enumerate(SIRI[:4]):
-                ang = t * speed + i * (math.pi / 2)
-                off = base * (0.32 + amp * math.sin(t * 2.1 + i))
-                br = base * (0.62 + amp * math.cos(t * 1.7 + i * 1.3) + lv * 0.2)
-                bx, by = ORB_CX + off * math.cos(ang), ORB_CY + off * math.sin(ang)
-                c.create_oval(bx - br, by - br, bx + br, by + br, fill=col, outline="")
-            # glossy highlight + rim
-            c.create_oval(ORB_CX - base * 0.45, ORB_CY - base * 0.75, ORB_CX + base * 0.1, ORB_CY - base * 0.35,
-                          fill="#ffffff", outline="")
-            c.create_oval(ORB_CX - base, ORB_CY - base, ORB_CX + base, ORB_CY + base, outline="#c4b5fd", width=2)
+        self._draw_face(c, t, st, lv)
 
         y = ORB_CY + ORB_R + 26
         if typing_open:
@@ -422,6 +422,119 @@ class OrbApp:
         self._round_rect(x0, y, x1, bottom, 14, fill)
         c.tag_raise(tid)
         return bottom + 8
+
+    # ---------------- the AI-friend face ----------------
+    def _draw_face(self, c, t, st, lv):
+        """A friendly glowing blob with blinking eyes that look around and a mouth that talks."""
+        now = time.time()
+        cx, cy = ORB_CX, ORB_CY
+        speaking = st == "speaking"
+        # body size / wobble per state
+        if st == "paused":
+            size, wob = 0.85, 0.01
+        elif st in ("awake", "hearing"):
+            size, wob = 1.0 + lv * 0.18, 0.018 + lv * 0.03
+        elif st == "thinking":
+            size, wob = 1.0, 0.03
+        elif speaking:
+            size, wob = 1.02 + 0.04 * abs(math.sin(t * 6)), 0.03
+        else:
+            size, wob = 0.95, 0.018
+        R = ORB_R * size
+
+        # colours drift slowly (violet / pink / blue / cyan)
+        if st == "error":
+            edge, mid, core = "#7f1d1d", "#dc2626", "#fca5a5"
+        elif st == "paused":
+            edge, mid, core = "#374151", "#6b7280", "#d1d5db"
+        else:
+            k = (math.sin(t * 0.6) + 1) / 2
+            edge = _mix("#5b21b6", "#1d4ed8", k)
+            mid = _mix("#db2777", "#7c3aed", k)
+            core = _mix("#f0abfc", "#a5f3fc", k)
+
+        # listening glow ring reacts to the voice
+        if st in ("awake", "hearing"):
+            for i in range(2):
+                gr = R + 5 + i * 6 + lv * 14 + 2 * math.sin(t * 3 + i)
+                c.create_oval(cx - gr, cy - gr, cx + gr, cy + gr, outline=_mix(core, mid, i / 2), width=2)
+        elif st == "thinking":  # orbiting sparkles
+            for i in range(3):
+                a_ = t * 3 + i * 2.09
+                px, py = cx + (R + 9) * math.cos(a_), cy + (R + 9) * math.sin(a_)
+                c.create_oval(px - 2.5, py - 2.5, px + 2.5, py + 2.5, fill=core, outline="")
+
+        # gradient blob body (layers from edge to core)
+        layers = 9
+        for i in range(layers):
+            f = 1 - i / layers * 0.75
+            col = _mix(edge, mid, i / (layers * 0.55)) if i < layers * 0.55 else _mix(mid, core, (i - layers * 0.55) / (layers * 0.45))
+            pts = []
+            for j in range(40):
+                th = 2 * math.pi * j / 40
+                rr = R * f * (1 + wob * math.sin(3 * th + t * 2.2 + i * 0.3) + wob * 0.6 * math.sin(5 * th - t * 1.7))
+                ox = -R * 0.10 * (i / layers)   # light comes from the top-left
+                oy = -R * 0.14 * (i / layers)
+                pts += [cx + ox + rr * math.cos(th), cy + oy + rr * math.sin(th)]
+            c.create_polygon(pts, smooth=True, fill=col, outline="")
+        # soft highlight
+        c.create_oval(cx - R * 0.55, cy - R * 0.78, cx - R * 0.05, cy - R * 0.5, fill=_mix(core, "#ffffff", 0.6), outline="")
+
+        # ---- eyes ----
+        # blink every few seconds
+        if now >= self._next_blink:
+            self._blink_start, self._next_blink = now, now + random.uniform(2.5, 5.5)
+        bt = now - self._blink_start
+        open_ = 1.0 if bt > 0.16 else abs(bt - 0.08) / 0.08
+        # where to look
+        if now >= self._next_look:
+            self._look_target = (random.uniform(-1, 1), random.uniform(-0.6, 0.6))
+            self._next_look = now + random.uniform(1.2, 3.0)
+        if st == "thinking":
+            tx, ty = 0.8 * math.cos(t * 1.5), -0.7 + 0.2 * math.sin(t * 1.5)
+        elif st in ("awake", "hearing", "speaking"):
+            tx, ty = 0.0, 0.0
+        else:
+            tx, ty = self._look_target
+        self._look[0] += (tx - self._look[0]) * 0.15
+        self._look[1] += (ty - self._look[1]) * 0.15
+        lx, ly = self._look[0] * R * 0.12, self._look[1] * R * 0.10
+        ex, ey = R * 0.30, cy - R * 0.10 + ly
+        ew, eh = R * 0.13, R * 0.23
+        happy = st == "awake" and now - getattr(self.mouth, "last_end", 0) < 1.3
+        for sx in (-1, 1):
+            x = cx + sx * ex + lx
+            if st == "paused":       # sleeping: closed eyes
+                c.create_line(x - ew, ey, x + ew, ey, fill="white", width=3, capstyle="round")
+            elif happy:              # ^ ^
+                c.create_arc(x - ew * 1.2, ey - eh * 0.5, x + ew * 1.2, ey + eh * 0.9, start=20, extent=140,
+                             style="arc", outline="white", width=3)
+            elif st == "error":      # worried
+                c.create_oval(x - ew, ey - eh * 0.7, x + ew, ey + eh * 0.7, fill="white", outline="")
+            else:
+                h = max(1.5, eh * open_ * (1.15 if st in ("awake", "hearing") else 1.0))
+                c.create_oval(x - ew, ey - h, x + ew, ey + h, fill="white", outline="")
+                if h > 4:  # tiny sparkle in the eye
+                    c.create_oval(x - ew * 0.15, ey - h * 0.65, x + ew * 0.35, ey - h * 0.25, fill=edge, outline="")
+
+        # ---- mouth ----
+        my = cy + R * 0.36 + ly * 0.5
+        mx = cx + lx * 0.6
+        if speaking:
+            o = 0.35 + 0.65 * abs(math.sin(t * 9.0)) * (0.7 + 0.3 * random.random())
+            mw, mh = R * 0.17, R * (0.04 + 0.13 * o)
+            c.create_oval(mx - mw, my - mh, mx + mw, my + mh, fill="#3b0764", outline="white", width=2)
+        elif st == "hearing":
+            r_ = R * (0.06 + lv * 0.06)
+            c.create_oval(mx - r_, my - r_, mx + r_, my + r_, outline="white", width=2)
+        elif st == "thinking":
+            c.create_line(mx - R * 0.10, my + 1, mx + R * 0.10, my - 2, fill="white", width=3, capstyle="round")
+        elif st == "error":
+            c.create_arc(mx - R * 0.16, my, mx + R * 0.16, my + R * 0.22, start=20, extent=140, style="arc",
+                         outline="white", width=3)
+        elif st != "paused":
+            c.create_arc(mx - R * 0.18, my - R * 0.20, mx + R * 0.18, my + R * 0.10, start=200, extent=140,
+                         style="arc", outline="white", width=3)
 
     def _results(self, y: float) -> float:
         """Siri-style list of results: bold title, grey summary, small source; click opens the link."""
@@ -480,7 +593,7 @@ class OrbApp:
             except queue.Empty:
                 break
         self.jobs.put(text)
-        self.awake_until = time.time() + FOLLOW_UP_WINDOW
+        self.awake_until = time.time() + self.follow_up
 
     def begin_answer(self):
         while not self.answers.empty():
@@ -535,7 +648,7 @@ class OrbApp:
             text = self.jobs.get()
             if text == "__greet__":
                 self.io.say(greeting(self.cfg))
-                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.awake_until = time.time() + self.follow_up
                 self.set_state("awake")
                 continue
             self.busy.set()
@@ -551,7 +664,7 @@ class OrbApp:
                 if reply is None or not self.jobs.empty():
                     continue  # cancelled / a newer command is waiting
                 self.io.say(reply)
-                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.awake_until = time.time() + self.follow_up
             except Exception as e:  # noqa: BLE001
                 log.exception("job failed")
                 self.show_answer(f"Error: {e}")
@@ -581,6 +694,13 @@ class OrbApp:
             if self.paused:
                 time.sleep(0.3)
                 continue
+            if not self.conversation_active():
+                # Microphone fully OFF (no orange dot) until "Hey Siri, Karishma", the keyboard
+                # shortcut, a click on the face or the Dock icon wakes her.
+                if self.state in ("awake", "hearing"):
+                    self.set_state("listening")
+                time.sleep(0.2)
+                continue
             flag["over_voice"] = False
             heard = ears.listen(max_wait=3, echo_guard=lambda: mouth.speaking or time.time() - mouth.last_end < 0.6,
                                 on_start=barge_in)
@@ -604,7 +724,7 @@ class OrbApp:
                 heard, cfg,
                 over_voice=flag["over_voice"], near_voice=near_voice, speakers=output_is_speakers(),
                 said=self.answer_text, waiting_answer=self.waiting_answer.is_set(),
-                awake=cfg.listen_mode == "always" or time.time() < self.awake_until,
+                awake=(not cfg.mic_always_on) or time.time() < self.awake_until,
                 busy=self.busy.is_set(),
             )
             log.info("route: %s %r", action, text)
@@ -620,14 +740,14 @@ class OrbApp:
                 self.answers.put(text)
             elif action == "wake":
                 self.show_query(heard)
-                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.awake_until = time.time() + self.follow_up
                 self.set_state("awake", "Ji, boliye…")
             elif action == "hush":
                 if self.brain:
                     self.brain.cancel.set()
                 self.show_query(heard)
                 self.show_answer("Theek hai, ruk gayi.")
-                self.awake_until = time.time() + FOLLOW_UP_WINDOW
+                self.awake_until = time.time() + self.follow_up
                 self.set_state("awake")
             elif action == "bye":
                 self.awake_until = 0
@@ -636,6 +756,13 @@ class OrbApp:
                 self.set_state("listening")
             else:  # command
                 self.submit(text)
+
+
+def _mix(c1: str, c2: str, k: float) -> str:
+    k = max(0.0, min(1.0, k))
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * k) for x, y in zip(a, b))
 
 
 def _domain(url: str) -> str:

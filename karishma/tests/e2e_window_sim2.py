@@ -26,13 +26,18 @@ class FakeMouth(v.Mouth):
 SCRIPT = [  # (delay, heard)
     (4.6, "Karishma Chrome restart karo"),   # command -> confirm question
     (1.2, "haan"),                           # said WHILE she reads the question (on speakers)
-    (14.0, "Karishma"),                      # after she went hidden -> comes back
-    (1.0, "Satish Kumar designer kaun hai"), # follow-up -> result cards
+    ("WAKE", None),                          # after she went hidden: "Hey Siri, Karishma" shortcut
+    (1.0, "Satish Kumar designer kaun hai"), # -> result cards
 ]
+MIC = {"calls_while_hidden": 0}
 class FakeEars:
     level = 0.0; last_error = ""; mic_blocked = False
     def __init__(self): self.i = 0
     def listen(self, max_wait=3, echo_guard=None, on_start=None):
+        if app.hidden:
+            MIC["calls_while_hidden"] += 1
+        if self.i < len(SCRIPT) and SCRIPT[self.i][0] == "WAKE":
+            time.sleep(0.5); return ""
         if self.i >= len(SCRIPT):
             time.sleep(min(max_wait, 1)); return ""
         delay, text = SCRIPT[self.i]
@@ -82,6 +87,16 @@ def watcher():
         time.sleep(0.1)
 threading.Thread(target=watcher, daemon=True).start()
 
+def siri_trigger():
+    while not checks.get("hidden_for_a_while"):
+        if app.hidden:
+            time.sleep(4); checks["hidden_for_a_while"] = True
+        time.sleep(0.2)
+    ev("SIRI_SHORTCUT")
+    (app.cfg.home / "wake").touch()
+    app.ears.i += 1  # move past the WAKE marker
+threading.Thread(target=siri_trigger, daemon=True).start()
+
 def finish():
     time.sleep(32)
     os.system(f"import -window root {SHOT}e2e2_cards.png")
@@ -102,7 +117,8 @@ def finish():
     check(any(e[1] == "STOPPED" and "chalaun" in e[2] for e in events), "'haan' while she spoke stopped her")
     check(("CONFIRM_RESULT", True) in names, "'haan' approved the confirmation")
     check(any(e[1] == "HIDDEN" for e in events), "orb hid itself when idle")
-    check(checks.get("shown_again", False), "'Karishma' brought the orb back")
+    check(checks.get("shown_again", False), "Siri shortcut (wake file) brought her back")
+    check(MIC["calls_while_hidden"] == 0, "microphone stayed OFF while she was asleep (no orange dot)")
     check(len(app.results) == 3 or any(e[1] == "BRAIN" and "YouTube" in e[2] for e in events), "result cards shown")
     check(any(e[1] == "BRAIN" and e[2] == "YouTube kholo" for e in events), "typed command submitted")
     print("ALL OK" if ok else "SOME FAILED", flush=True)

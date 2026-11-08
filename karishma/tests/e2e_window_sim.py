@@ -2,7 +2,7 @@
 """End-to-end: real OrbApp threads + UI, fake mic/speaker/Claude, scripted conversation."""
 import os, sys, time, threading
 os.environ.update(KARISHMA_HOME="/tmp/karishma_e2e", ANTHROPIC_API_KEY="x", ELEVENLABS_API_KEY="y",
-                  KARISHMA_USER_NAME="Satish")
+                  KARISHMA_USER_NAME="Satish", KARISHMA_MIC_ALWAYS_ON="true")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import karishma.window as w
 import karishma.voice as v

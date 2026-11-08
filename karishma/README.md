@@ -63,24 +63,25 @@ Setup ke time `Karishma.app` apne aap **Applications** me ban jaati hai. Agar na
 ./make_app.sh
 ```
 
-Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Siri jaisa animated gola aayega:
-- dheere saans leta gola = 'Karishma' bolne ka intezaar
-- bada, aawaz ke saath hilta = sun rahi hai
-- tezi se ghoomta = soch / kaam kar rahi hai
-- dhadakta = bol rahi hai
-- grey = paused, laal = problem
+Phir **Launchpad / Applications → Karishma** kholiye. Screen ke upar-right kone me Karishma ka cute face aata hai
+(aankhen jhapakti hain, idhar-udhar dekhti hain, bolte waqt muh hilta hai, sochte waqt upar dekhti hai, khush hoke ^ ^).
 
-Aapka sawaal aur Karishma ka jawab gole ke neeche card me dikhte hain. Kisi vyakti / company / cheez ke baare me
-poochho to Siri jaisi result cards aati hain (click karo to link khulta hai).
-Kuch der koi baat na ho to gola **gayab** ho jaata hai; "Karishma" bolo to wapas aata hai.
-**Gole par click** (ya Dock me Karishma par click) = jagao + **typing box** khulta hai. **Right-click** = menu
-(pause, naya topic, settings, band karo). Gole ko drag karke kahin bhi rakh sakte hain.
-Confirm karte waqt Karishma sirf chhota sawaal bolti hai (command screen par dikhta hai); bolte-bolte bhi
-"haan" / "nahi" bol sakte ho.
+**Mic sirf bulane par on hota hai** (orange mic dot hamesha nahi rehta), bilkul Siri jaisa. Bulane ke tareeke:
+- **"Hey Siri, Karishma"** — iske liye ek baar `./make_app.sh --siri` chalaiye aur Shortcuts app me *Add Shortcut*
+  dabaiye (Shortcuts > Settings > Advanced > *Allow Running Scripts* ON hona chahiye)
+- **Keyboard shortcut** — Shortcuts app me "Karishma" shortcut > ⓘ > *Add Keyboard Shortcut* (jaise ⌥ Space)
+- Face par ya Dock me **K** par click (typing box bhi khulta hai)
 
-**Beech me bolna:** Karishma bol rahi ho ya kaam kar rahi ho aur aap bolne lagein, to wo turant chup hokar
-aapki nayi baat sunti hai aur naya kaam karti hai. "ruko" / "bas" bolne se sirf ruk jaati hai.
-(Headphones se ye sabse achha chalta hai; speaker par bahut zor ki awaaz me apni hi awaaz se ruk sakti hai.)
+Baat khatam hone ke ~10 second baad mic band aur face gayab. Agar hamesha "Karishma" bolkar jagana ho
+(tab orange dot hamesha rahega) to `.env` me `KARISHMA_MIC_ALWAYS_ON=true`.
+
+Jawab face ke neeche card me dikhte hain; kisi vyakti / company / cheez ke baare me poochho to Siri jaisi
+result cards (click = link khulta hai). **Right-click** = menu (pause, naya topic, settings, band karo).
+Face ko drag karke kahin bhi rakh sakte hain. Confirm karte waqt Karishma sirf chhota sawaal bolti hai
+(command screen par dikhta hai); bolte-bolte bhi "haan" / "nahi" bol sakte ho.
+
+**Beech me bolna:** Headphones par kuch bhi bolo to turant ruk kar sunti hai. MacBook speaker par
+"Karishma …", "ruko" ya "bas" bolo (ya face par click) — apni hi awaaz se nahi rukti.
 
 Mac on hote hi apne aap chalu ho, iske liye:
 
