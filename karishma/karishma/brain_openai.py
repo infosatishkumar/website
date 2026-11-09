@@ -23,12 +23,35 @@ log = logging.getLogger("karishma.brain_openai")
 PROVIDERS: dict[str, tuple[str, str, str, bool]] = {
     "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY", "gpt-4.1-mini", True),
     "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai/", "GEMINI_API_KEY", "gemini-2.5-flash", True),
-    "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "llama-3.3-70b-versatile", True),
+    "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY", "openai/gpt-oss-120b", True),
     "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", "openai/gpt-4.1-mini", True),
     "deepseek": ("https://api.deepseek.com/v1", "DEEPSEEK_API_KEY", "deepseek-chat", True),
     "ollama": ("http://localhost:11434/v1", "OLLAMA_API_KEY", "llama3.1", False),
     "custom": ("", "KARISHMA_CUSTOM_API_KEY", "", True),
 }
+
+
+# When the configured model no longer exists, pick the first available model containing one of these.
+MODEL_PREFERENCE: dict[str, list[str]] = {
+    "groq": ["gpt-oss-120b", "llama-4-maverick", "kimi-k2", "llama-4-scout", "qwen3", "llama-3.3", "gpt-oss-20b", "llama"],
+    "openai": ["gpt-5-mini", "gpt-5", "gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o"],
+    "gemini": ["gemini-3-flash", "gemini-2.5-flash", "gemini-flash", "gemini-3-pro", "gemini-2.5-pro", "gemini"],
+    "openrouter": ["openai/gpt-5-mini", "openai/gpt-4.1-mini", "google/gemini-2.5-flash", "anthropic/claude"],
+    "deepseek": ["deepseek-chat", "deepseek"],
+    "ollama": ["llama3.1", "qwen", "llama", "mistral"],
+}
+NOT_CHAT = ("whisper", "tts", "embed", "guard", "moderation", "audio", "image", "dall", "transcribe", "realtime",
+            "search-preview", "distil", "vision-preview", "orpheus", "playai", "compound")
+
+
+def pick_model(provider: str, available: list[str]) -> str | None:
+    """Best chat model from the provider's live model list."""
+    chat = [m for m in available if not any(x in m.lower() for x in NOT_CHAT)]
+    for pref in MODEL_PREFERENCE.get(provider, []):
+        for m in sorted(chat, key=len):
+            if pref in m.lower():
+                return m
+    return chat[0] if chat else None
 
 
 class BrainUnavailable(Exception):
@@ -141,6 +164,18 @@ class OpenAICompatBrain:
             if "quota" in str(e).lower() or "credit" in str(e).lower() or "billing" in str(e).lower():
                 raise BrainUnavailable(f"{self.provider}: quota/credits khatam") from e
             raise
+        except openai.NotFoundError as e:
+            if "model" in str(e).lower() and not getattr(self, "_model_retry", False):
+                self._model_retry = True
+                try:
+                    new = pick_model(self.provider, [m.id for m in self.client.models.list()])
+                except Exception:  # noqa: BLE001
+                    new = None
+                if new and new != self.model:
+                    log.warning("%s: model %s not available, using %s", self.provider, self.model, new)
+                    self.model = new
+                    return self._create()
+            raise BrainUnavailable(f"{self.provider}: model '{self.model}' nahi mila") from e
         except openai.APIStatusError as e:
             if e.status_code == 402 or "credit" in str(e).lower() or "balance" in str(e).lower():
                 raise BrainUnavailable(f"{self.provider}: credits khatam") from e

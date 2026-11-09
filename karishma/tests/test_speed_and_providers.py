@@ -216,3 +216,36 @@ def test_mouth_stop_skips_remaining_parts(cfg):
     m._play_mp3 = play
     m.speak("Ek. " + "Do bahut lamba vaakya. " * 10)
     assert len(played) == 1
+
+
+def test_model_gone_picks_available_one(cfg):
+    import httpx
+    import openai
+
+    calls = []
+
+    def create(**kw):
+        calls.append(kw["model"])
+        if kw["model"] == "llama-3.3-70b-versatile":
+            req = httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
+            raise openai.NotFoundError("The model `llama-3.3-70b-versatile` does not exist",
+                                       response=httpx.Response(404, request=req), body=None)
+        return _resp("4 hota hai.")
+
+    models = ["whisper-large-v3", "meta-llama/llama-guard-4-12b", "openai/gpt-oss-20b", "openai/gpt-oss-120b",
+              "llama-3.1-8b-instant"]
+    client = NS(chat=NS(completions=NS(create=create)),
+                models=NS(list=lambda: [NS(id=m) for m in models]))
+    b = OpenAICompatBrain(cfg, ToolRegistry(), "S", "groq", {"KARISHMA_GROQ_MODEL": "llama-3.3-70b-versatile"}.get,
+                          client=client)
+    assert b.handle("2+2?") == "4 hota hai."
+    assert calls == ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
+    assert b.model == "openai/gpt-oss-120b"
+
+
+def test_pick_model_skips_non_chat():
+    from karishma.brain_openai import pick_model
+
+    assert pick_model("groq", ["whisper-large-v3", "llama-guard-x", "some-new-model"]) == "some-new-model"
+    assert pick_model("gemini", ["models/gemini-2.5-flash", "models/embedding-001"]) == "models/gemini-2.5-flash"
+    assert pick_model("groq", ["whisper-large-v3"]) is None
