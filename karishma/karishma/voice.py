@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 import wave
 from pathlib import Path
@@ -46,6 +47,24 @@ def clean_for_speech(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def split_for_speech(text: str, first_max: int = 90, max_len: int = 220) -> list[str]:
+    """Split into sentence chunks: a short first chunk (fast start), then bigger ones."""
+    sents = [x.strip() for x in re.split(r"(?<=[.!?।])\s+|\n+", text) if x.strip()]
+    if not sents:
+        return [text]
+    chunks, cur = [], ""
+    for sent in sents:
+        limit = first_max if not chunks else max_len
+        if cur and len(cur) + 1 + len(sent) > limit:
+            chunks.append(cur)
+            cur = sent
+        else:
+            cur = f"{cur} {sent}".strip()
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
 def pcm_to_wav(pcm: bytes, rate: int = SAMPLE_RATE) -> bytes:
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:
@@ -66,6 +85,7 @@ class Mouth:
         self.speaking = False
         self.interrupted = False
         self.last_end = 0.0
+        self._cache: dict[str, bytes] = {}
         if cfg.elevenlabs_api_key:
             from elevenlabs.client import ElevenLabs
 
@@ -111,23 +131,52 @@ class Mouth:
             self.speaking = False
             self.last_end = time.time()
 
+    def _tts(self, text: str) -> bytes:
+        cached = self._cache.get(text)
+        if cached:
+            return cached
+        audio = b"".join(self._client.text_to_speech.convert(
+            self.cfg.elevenlabs_voice_id, text=text, model_id=self.cfg.tts_model, output_format="mp3_44100_128"))
+        if len(text) <= 80:  # remember short, often-repeated replies
+            if len(self._cache) > 60:
+                self._cache.pop(next(iter(self._cache)))
+            self._cache[text] = audio
+        return audio
+
     def _speak(self, text: str) -> None:
         if self._client and self.cfg.elevenlabs_voice_id:
             try:
-                audio = b"".join(
-                    self._client.text_to_speech.convert(
-                        self.cfg.elevenlabs_voice_id,
-                        text=text,
-                        model_id=self.cfg.tts_model,
-                        output_format="mp3_44100_128",
-                    )
-                )
-                self._play_mp3(audio)
+                # Speak sentence by sentence: the next part is generated while the current one plays,
+                # so Karishma starts talking much sooner on long answers.
+                parts = split_for_speech(text)
+                nxt: dict = {}
+
+                def fetch(i: int):
+                    try:
+                        nxt[i] = self._tts(parts[i])
+                    except Exception as e:  # noqa: BLE001
+                        nxt[i] = e
+
+                audio = self._tts(parts[0])
+                for i in range(len(parts)):
+                    worker = None
+                    if i + 1 < len(parts):
+                        worker = threading.Thread(target=fetch, args=(i + 1,), daemon=True)
+                        worker.start()
+                    self._play_mp3(audio)
+                    if self.interrupted or worker is None:
+                        return
+                    worker.join()
+                    audio = nxt.pop(i + 1)
+                    if isinstance(audio, Exception):
+                        raise audio
                 return
             except Exception as e:  # noqa: BLE001
                 log.warning("ElevenLabs TTS failed, falling back: %s", e)
+                if self.interrupted:
+                    return
         if self.cfg.is_mac and shutil.which("say"):
-            voice = "Lekha" if re.search(r"[ऀ-ॿ]", text) else "Veena"
+            voice = "Lekha" if re.search(r"[\u0900-\u097F]", text) else "Veena"
             self._run(["say", "-v", voice, text])
 
     def _play_mp3(self, audio: bytes) -> None:
@@ -205,7 +254,7 @@ class Ears:
         self.threshold = max(300.0, noise * 3.0)
         log.info("noise=%.0f threshold=%.0f", noise, self.threshold)
 
-    def record(self, max_wait: float = 30.0, max_len: float = 30.0, silence: float = 0.8,
+    def record(self, max_wait: float = 30.0, max_len: float = 30.0, silence: float = 0.6,
                echo_guard=None, on_start=None) -> bytes | None:
         """Record one utterance (energy-based voice detection). Returns WAV bytes or None.
 

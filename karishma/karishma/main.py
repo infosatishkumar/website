@@ -13,7 +13,8 @@ import re
 import sys
 import time
 
-from .brain import Brain
+from . import fastpath
+from .brain import Brain, make_brain
 from .config import Config, load_config
 from .tools import (
     Memory, ToolRegistry, register_browser_tools, register_memory_tools, register_system_tools,
@@ -89,7 +90,11 @@ def build(cfg: Config, io, client=None) -> tuple[Brain, object]:
     register_system_tools(reg, cfg, io)
     browser = register_browser_tools(reg, cfg, io)
     register_memory_tools(reg, memory)
-    brain = Brain(cfg, reg, memory.as_text, client=client, on_status=lambda s: print(f"   … {s}", flush=True))
+    status = lambda s: print(f"   … {s}", flush=True)  # noqa: E731
+    if client is not None:  # tests inject a fake Claude client
+        brain = Brain(cfg, reg, memory.as_text, client=client, on_status=status)
+    else:
+        brain = make_brain(cfg, reg, memory.as_text, on_status=status)
     return brain, browser
 
 
@@ -130,7 +135,8 @@ def run_text(cfg: Config, speak: bool) -> None:
                 brain.reset()
                 io.say("Theek hai, naya topic shuru karte hain.")
                 continue
-            io.say(brain.handle(text))
+            quick = fastpath.handle(text) if cfg.is_mac else None
+            io.say(quick or brain.handle(text) or "")
     except KeyboardInterrupt:
         pass
     finally:
@@ -233,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg.listen_mode = args.mode
     if args.check:
         return check(cfg)
-    if not cfg.anthropic_api_key:
+    if cfg.brain_provider == "claude" and not cfg.anthropic_api_key and not cfg.backup_brains:
         print("❌ ANTHROPIC_API_KEY missing. karishma/.env file me daaliye (see .env.example).")
         return 1
     if args.text:

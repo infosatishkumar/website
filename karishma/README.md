@@ -129,6 +129,26 @@ Payment page aane par Karishma ruk ke aapko bolegi — aap OTP/PIN daalo aur "ho
 
 > Purana macOS (13 se pehle) ho aur Chromium na chale to `.env` me `KARISHMA_BROWSER_CHANNEL=chrome` likho (Google Chrome installed hona chahiye).
 
+## Dusri company ki API (Claude ke tokens khatam hone par)
+`.env` (right-click > Settings) me:
+
+| Kya chahiye | Kya likhna hai |
+|---|---|
+| Claude khatam ho to apne aap Gemini | `KARISHMA_BACKUP_BRAIN=gemini` + `GEMINI_API_KEY=...` |
+| Hamesha OpenAI se chalao | `KARISHMA_BRAIN=openai` + `OPENAI_API_KEY=...` |
+| Groq (bahut tez, free tier) | `KARISHMA_BRAIN=groq` + `GROQ_API_KEY=...` |
+| OpenRouter (ek key me sab models) | `KARISHMA_BRAIN=openrouter` + `OPENROUTER_API_KEY=...` + `KARISHMA_OPENROUTER_MODEL=...` |
+| Laptop par free (Ollama) | Ollama install + `KARISHMA_BRAIN=ollama` |
+| Koi aur OpenAI-compatible API | `KARISHMA_BRAIN=custom` + `KARISHMA_CUSTOM_BASE_URL/API_KEY/MODEL` |
+
+Model ka naam provider ki website se lekar `KARISHMA_<PROVIDER>_MODEL=` me daal sakte hain.
+Dusri APIs ke saath internet search ke liye free DuckDuckGo search use hota hai.
+
+## Speed
+- Volume, app/website kholna, time, date jaise kaam **bina AI ke turant** hote hain.
+- Lambe jawab tukdon me bole jaate hain (pehla tukda turant), chhote jawab yaad rehte hain.
+- Aur tez chahiye to `KARISHMA_MODEL=claude-haiku-5-5` (sabse tez Claude) ya `KARISHMA_BRAIN=groq`.
+
 ## Settings
 | Variable | Default | Matlab |
 |---|---|---|

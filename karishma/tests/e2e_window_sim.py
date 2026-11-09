@@ -72,7 +72,7 @@ def finish():
     def check(cond, msg):
         nonlocal ok
         print(("PASS " if cond else "FAIL ") + msg); ok &= cond
-    check(any(e[1]=="SPOKE_FULL" and e[2].startswith("Good evening") for e in events), "greeting not cut by its own echo")
+    check(any(e[1]=="SPOKE_FULL" and e[2].startswith("Good ") for e in events), "greeting not cut by its own echo")
     check(("BRAIN_START", "Delhi ki flight dhundo") in texts, "wake-word command runs")
     check(any(e[1]=="STOPPED" and e[2].startswith("Jawab: Delhi") for e in events), "'Karishma ruko' stopped her answer")
     check(not any(e[1]=="BRAIN_START" and "acha" in e[2] for e in events), "random talk while speaking ignored")

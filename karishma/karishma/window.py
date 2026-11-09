@@ -28,6 +28,7 @@ from tkinter import font as tkfont
 
 from .config import load_config
 from .main import FOLLOW_UP_WINDOW, RESET_WORDS, build, greeting
+from . import fastpath
 from .listening import route
 from .voice import Mouth, is_yes, output_is_speakers
 
@@ -570,7 +571,8 @@ class OrbApp:
     def _startup(self):
         try:
             cfg = self.cfg
-            if not cfg.anthropic_api_key or not cfg.elevenlabs_api_key:
+            if not cfg.elevenlabs_api_key or (cfg.brain_provider == "claude" and not cfg.anthropic_api_key
+                                              and not cfg.backup_brains):
                 self.set_state("error", "API keys missing — right-click > Settings")
                 return
             from .voice import Ears
@@ -610,6 +612,12 @@ class OrbApp:
                 if RESET_WORDS.search(text):
                     self.brain.reset()
                     self.io.say("Theek hai, naya topic.")
+                    continue
+                quick = fastpath.handle(text) if self.cfg.is_mac else None
+                if quick:  # everyday command done instantly, no AI round-trip
+                    log.info("fastpath: %s -> %s", text, quick)
+                    self.io.say(quick)
+                    self.awake_until = time.time() + self.follow_up
                     continue
                 self.set_state("thinking")
                 self.brain.on_status = lambda s: self.set_state("thinking", _friendly(s))
