@@ -35,6 +35,7 @@ class Config:
     listen_mode: str = "wake"  # wake | always | ptt   (terminal mode)
     brain_provider: str = "claude"   # claude | openai | gemini | groq | openrouter | deepseek | ollama | custom
     backup_brains: tuple[str, ...] = ()
+    voice_strictness: float = 0.0  # owner voice check: +0.05 stricter, -0.05 more lenient
     star_color: str = "gradient"  # orb sparkles: gradient | white
     mic_always_on: bool = True  # app: listen for "Karishma" all the time (macOS shows the orange mic dot)
     wake_words: tuple[str, ...] = ("karishma", "karisma", "kareeshma", "karishmaa", "करिश्मा", "krishma", "charisma", "carisma")
@@ -83,6 +84,7 @@ def load_config(env_file: str | Path | None = None) -> Config:
         browser_headless=_bool(env("KARISHMA_BROWSER_HEADLESS"), False),
         mic_always_on=_bool(env("KARISHMA_MIC_ALWAYS_ON"), True),
         star_color=(env("KARISHMA_STAR_COLOR") or "gradient").lower(),
+        voice_strictness=float(env("KARISHMA_VOICE_STRICTNESS") or 0),
         brain_provider=(env("KARISHMA_BRAIN") or "claude").strip().lower(),
         backup_brains=tuple(b.strip().lower() for b in (env("KARISHMA_BACKUP_BRAIN") or "").split(",") if b.strip()),
     )

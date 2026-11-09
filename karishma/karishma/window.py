@@ -98,6 +98,9 @@ class OrbApp:
         self.brain = None
         self.mouth = None
         self.ears = None
+        self.profile = None
+        self.enroll_requested = False
+        self.enrolling = False
         self.io = OrbIO(self)
 
         # view state
@@ -167,6 +170,8 @@ class OrbApp:
         self.menu.add_command(label="⌨️  Type karke poochho…", command=self.ask_typed)
         self.menu.add_command(label="⏸  Pause / Resume", command=self.toggle_pause)
         self.menu.add_command(label="🆕  Naya topic", command=self.new_topic)
+        self.menu.add_command(label="🎙  Meri awaaz sikhao (sirf meri awaaz sune)", command=self.request_enroll)
+        self.menu.add_command(label="👂  Sabki awaaz suno (voice check off)", command=self.disable_voice_check)
         self.menu.add_command(label="🗂  Jawab dikhao / chhupao", command=self.toggle_cards)
         self.menu.add_separator()
         self.menu.add_command(label="⚙️  Settings (.env)", command=self.open_settings)
@@ -256,6 +261,21 @@ class OrbApp:
         if self.paused and self.mouth:
             self.mouth.stop()
         self.set_state("paused" if self.paused else "listening")
+
+    def request_enroll(self):
+        self.enroll_requested = True
+        self.wake(sound=False)
+
+    def disable_voice_check(self):
+        if self.ears:
+            self.ears.verifier = None
+        self.profile = None
+        try:
+            (self.cfg.home / "voice_profile.json").unlink()
+        except OSError:
+            pass
+        self.show_answer("Voice check band. Ab main sabki awaaz sunungi. Wapas chalu karne ke liye "
+                         "right-click > 'Meri awaaz sikhao'.")
 
     def new_topic(self):
         if self.brain:
@@ -589,6 +609,7 @@ class OrbApp:
                 while self.ears.mic_blocked and not self.stop_all:
                     time.sleep(5)
                     self.ears.calibrate()
+            self._setup_voice_check()
             self.brain, self.browser = build(cfg, self.io)
             threading.Thread(target=self._brain_loop, daemon=True).start()
             threading.Thread(target=self._listen_loop, daemon=True).start()
@@ -597,10 +618,101 @@ class OrbApp:
             self.set_state("error", str(e)[:80])
             self.show_answer(f"Error: {e}")
 
+    # ---------------- owner voice check ----------------
+    def _setup_voice_check(self):
+        path = self.cfg.home / "voice_profile.json"
+        try:
+            from .speaker import VoiceProfile, encoder
+
+            encoder()  # load weights now, not on the first word
+        except Exception:  # noqa: BLE001
+            log.exception("voice check unavailable")
+            return
+        self.profile = VoiceProfile.load(path)
+        if self.profile is None:
+            if not (self.cfg.home / "voice_enroll_skipped").exists():
+                self.enroll_requested = True  # first run: learn the owner's voice
+            return
+        self.profile.strictness = self.cfg.voice_strictness
+        self.ears.verifier = self._verify
+
+    def _verify(self, pcm) -> bool:
+        prof = self.profile
+        if prof is None:
+            return True
+        ok, sim = prof.matches(pcm)
+        log.info("voice check: similarity %.3f (threshold %.2f) -> %s", sim, prof.threshold, "owner" if ok else "ignored")
+        if ok and sim >= prof.threshold + 0.06 and len(pcm) > 16000 * 1.5:
+            prof.adapt(pcm)
+            self._adapt_count = getattr(self, "_adapt_count", 0) + 1
+            if self._adapt_count % 10 == 0:
+                prof.save(self.cfg.home / "voice_profile.json")
+        return ok
+
+    ENROLL_LINES = [
+        "Karishma, aaj ka mausam kaisa hai aur kal barish hogi kya?",
+        "Mere liye YouTube par purane Hindi gaane chala do.",
+        "Kal subah saat baje ka alarm laga dena, mujhe office jaana hai.",
+        "Bangalore se Delhi ki sabse sasti flight dhoondh kar batao.",
+    ]
+
+    def _enroll(self):
+        """Learn the owner's voice: they read 4 short lines (runs on the listener thread, which owns the mic)."""
+        from .speaker import VoiceProfile
+
+        self.enroll_requested = False
+        self.enrolling = True
+        try:
+            self._enroll_steps()
+        finally:
+            self.enrolling = False
+
+    def _enroll_steps(self):
+        from .speaker import VoiceProfile
+
+        mouth, ears = self.mouth, self.ears
+        ears.verifier = None
+        self.awake_until = time.time() + 120
+        self.show_query("🎙 Aapki awaaz seekh rahi hoon")
+        self.show_answer("Taaki main sirf aapki awaaz sunu, background ki nahi: neeche wali line saaf awaaz me padhiye.")
+        self.set_state("speaking")
+        mouth.speak("Main aapki awaaz pehchanna seekhna chahti hoon, taaki sirf aapki baat sunu. "
+                    "Screen par chaar line aayengi, ek-ek karke padhiye.")
+        samples = []
+        for n, line in enumerate(self.ENROLL_LINES, 1):
+            for _attempt in range(3):
+                self.show_answer(f"Line {n}/4 — ye padhiye:\n\n“{line}”")
+                self.set_state("awake", f"Line {n}/4 padhiye…")
+                wav = ears.record(max_wait=12, max_len=10)
+                pcm = ears.last_pcm
+                if wav and pcm is not None and len(pcm) >= 16000 * 1.2:
+                    samples.append(pcm.copy())
+                    break
+                mouth.speak("Thoda lamba aur saaf padhiye.")
+            else:
+                self.show_answer("Awaaz theek se nahi mili. Baad me right-click > 'Meri awaaz sikhao' se dobara kariye.")
+                (self.cfg.home / "voice_enroll_skipped").touch()
+                self.set_state("awake")
+                return
+        self.set_state("thinking", "Awaaz yaad kar rahi hoon…")
+        prof = VoiceProfile.create(samples)
+        prof.strictness = self.cfg.voice_strictness
+        prof.save(self.cfg.home / "voice_profile.json")
+        self.profile = prof
+        ears.verifier = self._verify
+        log.info("voice enrolled, threshold %.2f", prof.threshold)
+        self.show_answer("Ho gaya! Ab main sirf aapki awaaz par dhyaan dungi. Doosron ki baat ignore karungi.")
+        self.set_state("speaking")
+        mouth.speak("Ho gaya! Ab main sirf aapki awaaz sunungi.")
+        self.awake_until = time.time() + self.follow_up
+        self.set_state("awake")
+
     def _brain_loop(self):
         self.jobs.put("__greet__")
         while not self.stop_all:
             text = self.jobs.get()
+            while self.enrolling or self.enroll_requested:  # don't talk over the voice-learning step
+                time.sleep(0.2)
             if text == "__greet__":
                 self.io.say(greeting(self.cfg))
                 self.awake_until = time.time() + self.follow_up
@@ -654,6 +766,13 @@ class OrbApp:
         while not self.stop_all:
             if self.paused:
                 time.sleep(0.3)
+                continue
+            if self.enroll_requested and not mouth.speaking and not self.busy.is_set():
+                try:
+                    self._enroll()
+                except Exception:  # noqa: BLE001
+                    log.exception("enrolment failed")
+                    self.enroll_requested = False
                 continue
             if not self.conversation_active():
                 # Microphone fully OFF (no orange dot) until "Hey Siri, Karishma", the keyboard

@@ -238,6 +238,9 @@ class Ears:
         self.mic_blocked = False
         self.last_error = ""
         self.level = 0.0  # 0..1, for the animated orb
+        self.last_pcm = None
+        self.verifier = None  # callable(np.int16 array) -> bool : is this the owner's voice?
+        self.rejected = 0
         self.calibrate()
 
     def calibrate(self, seconds: float = 1.0) -> None:
@@ -300,6 +303,7 @@ class Ears:
         pcm = b"".join(frames)
         if len(pcm) < SAMPLE_RATE * 2 * 0.4:  # < 0.4 s -> noise
             return None
+        self.last_pcm = np.frombuffer(pcm, dtype=np.int16)
         return pcm_to_wav(pcm)
 
     def transcribe(self, wav: bytes) -> str:
@@ -315,6 +319,13 @@ class Ears:
         wav = self.record(max_wait=max_wait, echo_guard=echo_guard, on_start=on_start)
         if not wav:
             return ""
+        if self.verifier is not None and self.last_pcm is not None:
+            try:
+                if not self.verifier(self.last_pcm):
+                    self.rejected += 1
+                    return ""  # someone else talking - ignore (and don't spend speech-to-text credits)
+            except Exception as e:  # noqa: BLE001
+                log.warning("voice check failed: %s", e)
         try:
             return self.transcribe(wav)
         except Exception as e:  # noqa: BLE001

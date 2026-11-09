@@ -144,6 +144,15 @@ Payment page aane par Karishma ruk ke aapko bolegi — aap OTP/PIN daalo aur "ho
 Model ka naam provider ki website se lekar `KARISHMA_<PROVIDER>_MODEL=` me daal sakte hain.
 Dusri APIs ke saath internet search ke liye free DuckDuckGo search use hota hai.
 
+## Sirf aapki awaaz
+Pehli baar kholne par Karishma aapse 4 chhoti lines padhwa kar aapki awaaz seekhti hai. Uske baad wo har baat
+sunne se pehle check karti hai ki awaaz aapki hai ya nahi; TV, ghar ke log, phone call ki awaaz ignore hoti hai
+(aur unke liye ElevenLabs credits bhi kharch nahi hote). Voice model: Resemblyzer (Apache-2.0), numpy me,
+`karishma/assets/voice_encoder.npz` - sab aapke Mac par hi chalta hai, awaaz kahin upload nahi hoti.
+- Dobara sikhana: right-click > **Meri awaaz sikhao**
+- Band karna: right-click > **Sabki awaaz suno**
+- Aapki baat bhi ignore ho rahi ho: `.env` me `KARISHMA_VOICE_STRICTNESS=-0.05`; doosre ab bhi pakde jaa rahe hon: `0.05`
+
 ## Speed
 - Volume, app/website kholna, time, date jaise kaam **bina AI ke turant** hote hain.
 - Lambe jawab tukdon me bole jaate hain (pehla tukda turant), chhote jawab yaad rehte hain.
